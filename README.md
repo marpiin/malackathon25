@@ -1,6 +1,11 @@
 # 🧠 Dashboard de Salud Mental
 
-![Python]([https://img.shields.io/badge/python-vio/badge/oracle-autonomous-re](https://img.shields.io/badge/python-vio/badge/oracle-autonomous-re) análisis y visualización de datos de salud mental en España, desarrollado con Flask y Oracle Autonomous Database.
+![Python](https://img.shields.io/badge/python-v3.12+-blue.svg)
+![Flask](https://img.shields.io/badge/flask-v3.0+-green.svg)
+![Oracle](https://img.shields.io/badge/oracle-autonomous-red.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
+Dashboard interactivo para análisis y visualización de datos de salud mental en España, desarrollado con Flask y Oracle Autonomous Database.
 
 ## 📊 Características
 
