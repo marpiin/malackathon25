@@ -4,9 +4,16 @@ import pandas as pd
 import numpy as np
 import oracledb
 import config
+from dotenv import load_dotenv
+
+load_dotenv('.env')
 
 app = Flask(__name__)
 app.config.from_object(config.Config)
+
+import os
+print(os.path.isdir(app.config['WALLET_LOCATION']))
+print(app.config['WALLET_LOCATION'])
 
 # Función para obtener conexión
 def get_connection():
