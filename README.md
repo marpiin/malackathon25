@@ -43,29 +43,39 @@ Dashboard interactivo para análisis y visualización de datos de salud mental e
 
 ## 1. Clonar el repositorio
 
-bash
-
-`git clone https://github.com/tu-usuario/salud-mental-dashboard.git cd salud-mental-dashboard`
+```bash
+git clone https://github.com/tu-usuario/salud-mental-dashboard.git cd salud-mental-dashboard
+```
 
 ## 2. Crear y activar entorno virtual
 
-bash
-
-`python -m venv .venv # En Linux/Mac source .venv/bin/activate # En Windows .venv\Scripts\activate`
+```bash
+python -m venv .venv # En Linux/Mac source .venv/bin/activate # En Windows .venv\Scripts\activate
+```
 
 ## 3. Instalar dependencias
 
-bash
-
-`pip install -r requirements.txt`
+```bash
+pip install -r requirements.txt
+```
 
 ## 4. Configurar variables de entorno
 
 Crea un archivo `.env` en la raíz del proyecto:
 
-bash
-
-`SECRET_KEY=tu-clave-secreta-super-segura # Credenciales de login LOGIN_USERNAME=admin LOGIN_PASSWORD=tu-contraseña-segura # Configuración de Oracle Database DB_USER=tu-usuario DB_PASSWORD=tu-contraseña DB_DSN=tcps://tu-host:1522/tu-servicio # Wallet de Oracle WALLET_LOCATION=/ruta/a/tu/wallet WALLET_PASSWORD=tu-password-wallet`
+```bash
+SECRET_KEY=tu-clave-secreta-super-segura 
+# Credenciales de login 
+LOGIN_USERNAME=admin 
+LOGIN_PASSWORD=tu-contraseña-segura 
+# Configuración de Oracle Database 
+DB_USER=tu-usuario 
+DB_PASSWORD=tu-contraseña 
+DB_DSN=tcps://tu-host:1522/tu-servicio 
+# Wallet de Oracle 
+WALLET_LOCATION=/ruta/a/tu/wallet 
+WALLET_PASSWORD=tu-password-wallet
+```
 
 ## 5. Descargar el Wallet de Oracle
 
