@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+
+{% block head %}
+<title>Dashboard de Salud Mental</title>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros de Datos</h5>
+            </div>
+            <div class="card-body">
+                <form id="filterForm">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="comunidad" class="form-label">Comunidad Autónoma</label>
+                            <select class="form-select" id="comunidad" name="comunidad">
+                                <option value="">Todas las comunidades</option>
+                                {% for comunidad in comunidades %}
+                                <option value="{{ comunidad }}">{{ comunidad }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="sexo" class="form-label">Sexo</label>
+                            <select class="form-select" id="sexo" name="sexo">
+                                <option value="">Todos</option>
+                                {% for sexo in sexos %}
+                                <option value="{{ sexo }}">{{ sexo }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="categoria" class="form-label">Categoría Diagnóstico</label>
+                            <select class="form-select" id="categoria" name="categoria">
+                                <option value="">Todas las categorías</option>
+                                {% for categoria in categorias %}
+                                <option value="{{ categoria }}">{{ categoria }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="fecha_inicio" class="form-label">Fecha Inicio</label>
+                            <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="fecha_fin" class="form-label">Fecha Fin</label>
+                            <input type="date" class="form-control" id="fecha_fin" name="fecha_fin">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-2"></i>Aplicar Filtros
+                            </button>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="button" id="resetFilters" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-redo me-2"></i>Restablecer
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-success shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Total Registros</h5>
+                        <h3 id="totalRecords" class="display-6">-</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-database fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Estancia Promedio</h5>
+                        <h3 id="avgStay" class="display-6">-</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-calendar-day fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Coste Total</h5>
+                        <h3 id="totalCost" class="fs-13">-</h3>
+                    </div>
+                    <div class="align-self-center ms-2">
+                        <i class="fas fa-euro-sign fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Ingresos UCI</h5>
+                        <h3 id="uciAdmissions" class="display-6">-</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-procedures fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Distribución por Comunidad Autónoma</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="comunidadChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-venus-mars me-2"></i>Distribución por Sexo</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="sexoChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-stethoscope me-2"></i>Categorías de Diagnóstico</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="categoriaChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Ingresos por Mes</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="mesChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-procedures me-2"></i>Análisis de Ingresos en UCI</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <canvas id="uciChart" height="300"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">Estadísticas de UCI</h5>
+                                <p class="card-text">
+                                    <strong>Pacientes con ingreso en UCI:</strong> <span id="uciPatients">-</span><br>
+                                    <strong>Porcentaje del total:</strong> <span id="uciPercentage">-</span><br>
+                                    <strong>Días promedio en UCI:</strong> <span id="uciAvgDays">-</span>
+                                </p>
+                                <div class="progress mb-3">
+                                    <div id="uciProgress" class="progress-bar bg-danger" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar gráficos
+    const comunidadChart = new Chart(document.getElementById('comunidadChart'), {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Pacientes',
+                data: [],
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    const sexoChart = new Chart(document.getElementById('sexoChart'), {
+        type: 'doughnut',
+        data: {
+            labels: [],
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.5)',
+                    'rgba(255, 99, 132, 0.5)',
+                    'rgba(255, 206, 86, 0.5)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(255, 206, 86, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    const categoriaChart = new Chart(document.getElementById('categoriaChart'), {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Pacientes',
+                data: [],
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    const mesChart = new Chart(document.getElementById('mesChart'), {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Ingresos',
+                data: [],
+                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                borderColor: 'rgba(153, 102, 255, 1)',
+                borderWidth: 2,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    const uciChart = new Chart(document.getElementById('uciChart'), {
+        type: 'pie',
+        data: {
+            labels: ['Sin ingreso UCI', 'Con ingreso UCI'],
+            datasets: [{
+                data: [0, 0],
+                backgroundColor: [
+                    'rgba(75, 192, 192, 0.5)',
+                    'rgba(255, 99, 132, 0.5)'
+                ],
+                borderColor: [
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(255, 99, 132, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Función para cargar datos
+    function loadData() {
+        const form = document.getElementById('filterForm');
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData);
+        
+        fetch(`/api/data?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                // Actualizar tarjetas de estadísticas
+                const totalRecords = Object.values(data.comunidades).reduce((a, b) => a + b, 0);
+                document.getElementById('totalRecords').textContent = totalRecords.toLocaleString();
+                document.getElementById('avgStay').textContent = data.estancia_promedio ? data.estancia_promedio.toFixed(1) + ' días' : 'N/A';
+                document.getElementById('totalCost').textContent = data.coste_total ? '€' + data.coste_total.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : 'N/A';
+                document.getElementById('uciAdmissions').textContent = data.pacientes_uci ? data.pacientes_uci.toLocaleString() : '0';
+                
+                // Actualizar gráficos
+                // Gráfico de comunidades
+                comunidadChart.data.labels = Object.keys(data.comunidades);
+                comunidadChart.data.datasets[0].data = Object.values(data.comunidades);
+                comunidadChart.update();
+                
+                // Gráfico de sexos - Mapear códigos a etiquetas
+                const sexoLabels = Object.keys(data.sexos).map(key => {
+                    if (key === '1') return 'Hombre';
+                    if (key === '2') return 'Mujer';
+                    return 'No especificado';
+                });
+                sexoChart.data.labels = sexoLabels;
+                sexoChart.data.datasets[0].data = Object.values(data.sexos);
+                sexoChart.update();
+                
+                // Gráfico de categorías - Limitar a top 7 para que sea legible
+                const categorias = Object.entries(data.categorias)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 7);
+                categoriaChart.data.labels = categorias.map(c => c[0].length > 40 ? c[0].substring(0, 37) + '...' : c[0]);
+                categoriaChart.data.datasets[0].data = categorias.map(c => c[1]);
+                categoriaChart.update();
+                
+                // Gráfico de meses
+                const meses = Object.keys(data.ingresos_por_mes || {}).sort();
+                const ingresosPorMes = meses.map(mes => data.ingresos_por_mes[mes]);
+                mesChart.data.labels = meses;
+                mesChart.data.datasets[0].data = ingresosPorMes;
+                mesChart.update();
+                
+                // Gráfico de UCI
+                const uciNo = totalRecords - (data.pacientes_uci || 0);
+                uciChart.data.datasets[0].data = [uciNo, data.pacientes_uci || 0];
+                uciChart.update();
+                
+                // Actualizar estadísticas de UCI
+                document.getElementById('uciPatients').textContent = data.pacientes_uci ? data.pacientes_uci.toLocaleString() : '0';
+                const uciPercentage = totalRecords > 0 ? ((data.pacientes_uci || 0) / totalRecords * 100).toFixed(1) : '0';
+                document.getElementById('uciPercentage').textContent = uciPercentage + '%';
+                document.getElementById('uciAvgDays').textContent = data.dias_uci_promedio ? data.dias_uci_promedio.toFixed(1) + ' días' : 'N/A';
+                document.getElementById('uciProgress').style.width = uciPercentage + '%';
+            })
+            .catch(error => {
+                console.error('Error al cargar datos:', error);
+                alert('Error al cargar los datos. Por favor, inténtalo de nuevo.');
+            });
+    }
+
+    // Cargar datos iniciales
+    loadData();
+
+    // Manejar envío del formulario
+    document.getElementById('filterForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        loadData();
+    });
+
+    // Manejar botón de restablecer
+    document.getElementById('resetFilters').addEventListener('click', function() {
+        document.getElementById('filterForm').reset();
+        loadData();
+    });
+});
+</script>
+{% endblock %}
