@@ -94,9 +94,9 @@ WALLET_PASSWORD=tu-password-wallet
 
 ## Ejecutar la aplicación
 
-bash
-
-`python app.py`
+```bash
+python app.py
+```
 
 La aplicación estará disponible en `http://localhost:5000`
 
@@ -111,9 +111,34 @@ Usa las credenciales configuradas en tu archivo `.env`:
 
 ## 📁 Estructura del Proyecto
 
-text
+```text
 
-`salud-mental-dashboard/ │ ├── app.py                      # Aplicación principal Flask ├── config.py                   # Configuración y variables de entorno ├── requirements.txt            # Dependencias del proyecto ├── .env                        # Variables de entorno (no incluir en git) ├── .env.example               # Ejemplo de variables de entorno ├── .gitignore                 # Archivos a ignorar por git │ ├── templates/                  # Plantillas HTML │   ├── base.html              # Plantilla base │   ├── login.html             # Página de login │   ├── index.html             # Dashboard principal │   └── data_table.html        # Tabla de datos │ ├── static/                     # Archivos estáticos │   ├── css/ │   │   └── style.css          # Estilos personalizados │   └── js/ │       └── main.js            # Scripts JavaScript (opcional) │ └── oracle_wallet/             # Wallet de Oracle (no incluir en git)     ├── cwallet.sso    ├── tnsnames.ora    └── ...`
+salud-mental-dashboard/
+│
+├── app.py                      # Aplicación principal Flask
+├── config.py                   # Configuración y variables de entorno
+├── requirements.txt            # Dependencias del proyecto
+├── .env                        # Variables de entorno (no incluir en git)
+├── .env.example               # Ejemplo de variables de entorno
+├── .gitignore                 # Archivos a ignorar por git
+│
+├── templates/                  # Plantillas HTML
+│   ├── base.html              # Plantilla base
+│   ├── login.html             # Página de login
+│   ├── index.html             # Dashboard principal
+│   └── data_table.html        # Tabla de datos
+│
+├── static/                     # Archivos estáticos
+│   ├── css/
+│   │   └── style.css          # Estilos personalizados
+│   └── js/
+│       └── main.js            # Scripts JavaScript (opcional)
+│
+└── oracle_wallet/             # Wallet de Oracle (no incluir en git)
+    ├── cwallet.sso
+    ├── tnsnames.ora
+    └── ...
+```
 
 ## 🗄️ Base de Datos
 
