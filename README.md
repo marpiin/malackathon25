@@ -26,7 +26,9 @@ Dashboard interactivo para análisis y visualización de datos de salud mental e
 
 ## 🚀 Demo
 
-![Dashboard Preview](screenshot Previos
+![Dashboard Preview](screenshot.png)
+
+## 📋 Requisitos Previos
 
 - Python 3.12 o superior
     
