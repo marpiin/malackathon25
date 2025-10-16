@@ -1,5 +1,5 @@
 :root {
-    /* Nueva paleta profesional */
+    /* Nueva paleta profesional con mejor contraste */
     --primary-color: #2C3E50;        /* Azul oscuro elegante */
     --secondary-color: #34495E;      /* Azul grisáceo */
     --accent-color: #1ABC9C;         /* Verde agua/turquesa */
@@ -10,8 +10,9 @@
     --danger-color: #E74C3C;         /* Rojo peligro */
     --light-bg: #ECF0F1;             /* Fondo claro */
     --white: #FFFFFF;
-    --text-dark: #2C3E50;
-    --text-muted: #7F8C8D;
+    --text-dark: #1C2833;            /* Texto oscuro mejorado */
+    --text-medium: #34495E;          /* Texto medio */
+    --text-muted: #5D6D7E;           /* Texto secundario mejorado */
     --border-color: #BDC3C7;
     --shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.1);
@@ -114,6 +115,12 @@ h1, h2, h3, h4, h5, h6 {
 
 .table tbody tr {
     transition: all 0.2s ease;
+    color: var(--text-dark);
+}
+
+.table tbody td {
+    color: var(--text-dark);
+    font-weight: 400;
 }
 
 .table tbody tr:hover {
@@ -151,6 +158,7 @@ h1, h2, h3, h4, h5, h6 {
     padding: 0.625rem 1rem;
     transition: all 0.3s ease;
     background-color: var(--white);
+    color: var(--text-dark);
 }
 
 
@@ -158,6 +166,17 @@ h1, h2, h3, h4, h5, h6 {
     border-color: var(--accent-color);
     box-shadow: 0 0 0 0.25rem rgba(26, 188, 156, 0.15);
     background-color: var(--white);
+    color: var(--text-dark);
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.form-label {
+    color: var(--text-dark);
+    font-weight: 500;
 }
 
 
