@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block head %}
+<title>Chat IA - Dashboard de Salud Mental</title>
+<style>
+    .chat-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    
+    .chat-box {
+        height: 500px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        margin-bottom: 20px;
+    }
+    
+    .message {
+        margin-bottom: 15px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        max-width: 80%;
+        word-wrap: break-word;
+        animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .user-message {
+        background-color: #007bff;
+        color: white;
+        margin-left: auto;
+        text-align: right;
+    }
+    
+    .ai-message {
+        background-color: white;
+        border: 1px solid #dee2e6;
+        margin-right: auto;
+    }
+    
+    .sql-query {
+        background-color: #f1f3f5;
+        border-left: 4px solid #007bff;
+        padding: 10px;
+        margin: 10px 0;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        border-radius: 5px;
+        overflow-x: auto;
+    }
+    
+    .loading {
+        display: none;
+        text-align: center;
+        padding: 10px;
+    }
+    
+    .loading.active {
+        display: block;
+    }
+    
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+    
+    .input-group {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-radius: 25px;
+        overflow: hidden;
+    }
+    
+    .input-group input {
+        border: none;
+        padding: 15px 20px;
+    }
+    
+    .input-group button {
+        border: none;
+        padding: 15px 30px;
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .input-group button:hover {
+        background-color: #0056b3;
+    }
+    
+    .message-header {
+        font-weight: bold;
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+    }
+    
+    .timestamp {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        margin-top: 5px;
+    }
+    
+    .example-questions {
+        margin-bottom: 20px;
+    }
+    
+    .example-btn {
+        margin: 5px;
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">
+                <i class="fas fa-robot me-2"></i>Asistente IA - Consultas en Lenguaje Natural
+            </h4>
+            <small>Pregunta sobre los datos y obtén respuestas inteligentes</small>
+        </div>
+        <div class="card-body">
+            <!-- Preguntas de ejemplo -->
+            <div class="example-questions">
+                <h6 class="text-muted">
+                    <i class="fas fa-lightbulb me-1"></i>Preguntas de ejemplo:
+                </h6>
+                <button class="btn btn-outline-primary btn-sm example-btn" onclick="setQuestion(this)">
+                    ¿Cuántos pacientes hay en total?
+                </button>
+                <button class="btn btn-outline-primary btn-sm example-btn" onclick="setQuestion(this)">
+                    ¿Cuál es el promedio de días de estancia?
+                </button>
+                <button class="btn btn-outline-primary btn-sm example-btn" onclick="setQuestion(this)">
+                    ¿Qué comunidad tiene más ingresos?
+                </button>
+                <button class="btn btn-outline-primary btn-sm example-btn" onclick="setQuestion(this)">
+                    ¿Cuántos hombres y mujeres hay?
+                </button>
+                <button class="btn btn-outline-primary btn-sm example-btn" onclick="setQuestion(this)">
+                    ¿Cuál es el coste total de todos los ingresos?
+                </button>
+            </div>
+            
+            <!-- Chat box -->
+            <div class="chat-box" id="chatBox">
+                <div class="text-center text-muted">
+                    <i class="fas fa-comments fa-3x mb-3"></i>
+                    <p>Haz una pregunta sobre los datos de salud mental</p>
+                </div>
+            </div>
+            
+            <!-- Loading indicator -->
+            <div class="loading" id="loading">
+                <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                <span class="text-muted">Procesando tu pregunta...</span>
+            </div>
+            
+            <!-- Input -->
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    id="userInput" 
+                    placeholder="Escribe tu pregunta aquí..."
+                    onkeypress="handleKeyPress(event)"
+                >
+                <button class="btn" type="button" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane me-1"></i>Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Información adicional -->
+    <div class="alert alert-info mt-3">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Consejo:</strong> Puedes hacer preguntas sobre pacientes, comunidades, diagnósticos, 
+        costes, estancias, UCI, sexo y fechas de ingreso. El sistema generará consultas SQL automáticamente.
+    </div>
+</div>
+
+<script>
+    function setQuestion(button) {
+        document.getElementById('userInput').value = button.textContent.trim();
+        document.getElementById('userInput').focus();
+    }
+    
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    }
+    
+    function addMessage(text, isUser, sqlQuery = null) {
+        const chatBox = document.getElementById('chatBox');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+        
+        const now = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        
+        let content = `
+            <div class="message-header">
+                <i class="fas fa-${isUser ? 'user' : 'robot'} me-1"></i>
+                ${isUser ? 'Tú' : 'Asistente IA'}
+            </div>
+            <div>${text}</div>
+        `;
+        
+        if (sqlQuery) {
+            content += `
+                <div class="sql-query mt-2">
+                    <small><i class="fas fa-database me-1"></i><strong>Consulta SQL:</strong></small><br>
+                    ${sqlQuery}
+                </div>
+            `;
+        }
+        
+        content += `<div class="timestamp">${now}</div>`;
+        
+        messageDiv.innerHTML = content;
+        chatBox.appendChild(messageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+    
+    async function sendMessage() {
+        const input = document.getElementById('userInput');
+        const question = input.value.trim();
+        
+        if (!question) return;
+        
+        // Clear initial message if exists
+        const chatBox = document.getElementById('chatBox');
+        if (chatBox.children[0]?.classList.contains('text-center')) {
+            chatBox.innerHTML = '';
+        }
+        
+        // Add user message
+        addMessage(question, true);
+        input.value = '';
+        
+        // Show loading
+        const loading = document.getElementById('loading');
+        loading.classList.add('active');
+        
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ question: question })
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                addMessage(`❌ Error: ${data.error}`, false);
+            } else {
+                addMessage(data.answer, false, data.sql_query);
+            }
+        } catch (error) {
+            addMessage('❌ Error al procesar tu pregunta. Por favor, intenta de nuevo.', false);
+            console.error('Error:', error);
+        } finally {
+            loading.classList.remove('active');
+        }
+    }
+</script>
+{% endblock %}
