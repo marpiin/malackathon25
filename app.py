@@ -8,7 +8,6 @@ import config
 app = Flask(__name__)
 app.config.from_object(config.Config)
 
-# Función para obtener conexión
 def get_connection():
     return oracledb.connect(
         user=app.config['DB_USER'],
@@ -18,7 +17,6 @@ def get_connection():
         wallet_password=app.config['WALLET_PASSWORD']
     )
 
-# Decorador para rutas protegidas
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -54,7 +52,6 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    """Página principal - Obtiene filtros desde las tablas normalizadas"""
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -78,12 +75,10 @@ def index():
 @app.route('/api/data')
 @login_required
 def get_data():
-    """API para obtener datos del dashboard - Usa VISTA_DASHBOARD"""
     try:
         conn = get_connection()
         cursor = conn.cursor()
         
-        # Usar VISTA_DASHBOARD (para el dashboard de la app)
         query = 'SELECT * FROM VISTA_DASHBOARD WHERE 1=1'
         params = []
         
@@ -127,30 +122,61 @@ def get_data():
         if df.empty:
             return jsonify({'error': 'No se encontraron datos con los filtros seleccionados'})
         
+        # Valores por defecto
+        pacientes_uci = 0
+        dias_uci_promedio = 0
+        ingresos_uci_dict = {}
+        
+        # Calcular UCI
+        if 'DIAS_UCI' in df.columns:
+            df['DIAS_UCI_NUM'] = pd.to_numeric(df['DIAS_UCI'], errors='coerce')
+            df_con_uci = df[df['DIAS_UCI_NUM'] > 0]
+            pacientes_uci = len(df_con_uci)
+            
+            if pacientes_uci > 0:
+                dias_uci_promedio = float(df_con_uci['DIAS_UCI_NUM'].mean())
+                if pd.isna(dias_uci_promedio):
+                    dias_uci_promedio = 0
+            
+            sin_uci = len(df) - pacientes_uci
+            ingresos_uci_dict = {'Sin UCI': sin_uci, 'Con UCI': pacientes_uci}
+        
+        # Estancia promedio
+        estancia_promedio = 0
+        if 'ESTANCIA_DIAS' in df.columns:
+            estancia = pd.to_numeric(df['ESTANCIA_DIAS'], errors='coerce')
+            estancia_promedio = float(estancia.mean())
+            if pd.isna(estancia_promedio):
+                estancia_promedio = 0
+        
+        # Coste total
+        coste_total = 0
+        if 'COSTE_APR' in df.columns:
+            coste = pd.to_numeric(df['COSTE_APR'], errors='coerce')
+            coste_total = float(coste.sum())
+            if pd.isna(coste_total):
+                coste_total = 0
+        
         result = {
             'comunidades': df['COMUNIDAD_ATENCION'].value_counts().to_dict() if 'COMUNIDAD_ATENCION' in df.columns else {},
             'sexos': df['SEXO'].value_counts().to_dict() if 'SEXO' in df.columns else {},
             'categorias': df['CATEGORIA_DIAGNOSTICO'].value_counts().to_dict() if 'CATEGORIA_DIAGNOSTICO' in df.columns else {},
             'ingresos_por_mes': df['MES_INGRESO'].value_counts().sort_index().to_dict() if 'MES_INGRESO' in df.columns else {},
-            'estancia_promedio': float(df['ESTANCIA_DIAS'].replace([None, 'NULL', ''], np.nan).astype(float).mean()) if 'ESTANCIA_DIAS' in df.columns else 0,
-            'coste_total': float(df['COSTE_APR'].replace([None, 'NULL', ''], np.nan).astype(float).sum()) if 'COSTE_APR' in df.columns else 0,
-            'ingresos_uci': df['INGRESO_EN_UCI'].value_counts().to_dict() if 'INGRESO_EN_UCI' in df.columns else {},
-            'pacientes_uci': int(df[df['INGRESO_EN_UCI'] == 'Sí'].shape[0]) if 'INGRESO_EN_UCI' in df.columns else 0,
-            'dias_uci_promedio': float(df[df['INGRESO_EN_UCI'] == 'Sí']['DIAS_UCI'].replace([None, 'NULL', ''], np.nan).astype(float).mean()) if 'INGRESO_EN_UCI' in df.columns and 'DIAS_UCI' in df.columns else 0
+            'estancia_promedio': estancia_promedio,
+            'coste_total': coste_total,
+            'ingresos_uci': ingresos_uci_dict,
+            'pacientes_uci': pacientes_uci,
+            'dias_uci_promedio': dias_uci_promedio
         }
         
-        for key in result:
-            if isinstance(result[key], float) and pd.isna(result[key]):
-                result[key] = 0
-        
         return jsonify(result)
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/table')
 @login_required
 def get_table_data():
-    """API para la tabla de datos - Usa VISTA_DASHBOARD con paginación"""
     try:
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 10))
@@ -228,7 +254,6 @@ def get_table_data():
 @app.route('/table')
 @login_required
 def table_view():
-    """Vista de tabla"""
     try:
         conn = get_connection()
         cursor = conn.cursor()
