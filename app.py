@@ -54,22 +54,17 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    """
-    Página principal - Obtiene filtros desde las tablas normalizadas
-    """
+    """Página principal - Obtiene filtros desde las tablas normalizadas"""
     try:
         conn = get_connection()
         cursor = conn.cursor()
         
-        # Obtener comunidades desde la tabla normalizada
         cursor.execute('SELECT nombre_comunidad FROM COMUNIDADES ORDER BY nombre_comunidad')
         comunidades = [row[0] for row in cursor.fetchall()]
         
-        # Obtener sexos distintos desde INGRESOS
         cursor.execute('SELECT DISTINCT sexo FROM INGRESOS WHERE sexo IS NOT NULL ORDER BY sexo')
         sexos = [row[0] for row in cursor.fetchall()]
         
-        # Obtener categorías desde la tabla normalizada
         cursor.execute('SELECT nombre_categoria FROM CATEGORIAS_DIAGNOSTICO ORDER BY nombre_categoria')
         categorias = [row[0] for row in cursor.fetchall()]
         
@@ -83,15 +78,13 @@ def index():
 @app.route('/api/data')
 @login_required
 def get_data():
-    """
-    API para obtener datos del dashboard - Usa la vista normalizada VISTA_MUY_INTERESANTE
-    """
+    """API para obtener datos del dashboard - Usa VISTA_DASHBOARD"""
     try:
         conn = get_connection()
         cursor = conn.cursor()
         
-        # Usar la vista VISTA_MUY_INTERESANTE que tiene todos los JOINs
-        query = 'SELECT * FROM VISTA_MUY_INTERESANTE WHERE 1=1'
+        # Usar VISTA_DASHBOARD (para el dashboard de la app)
+        query = 'SELECT * FROM VISTA_DASHBOARD WHERE 1=1'
         params = []
         
         comunidad = request.args.get('comunidad')
@@ -134,7 +127,6 @@ def get_data():
         if df.empty:
             return jsonify({'error': 'No se encontraron datos con los filtros seleccionados'})
         
-        # Adaptar nombres de columnas de la vista a los que espera el frontend
         result = {
             'comunidades': df['COMUNIDAD_ATENCION'].value_counts().to_dict() if 'COMUNIDAD_ATENCION' in df.columns else {},
             'sexos': df['SEXO'].value_counts().to_dict() if 'SEXO' in df.columns else {},
@@ -158,9 +150,7 @@ def get_data():
 @app.route('/api/table')
 @login_required
 def get_table_data():
-    """
-    API para la tabla de datos - Usa la vista normalizada VISTA_MUY_INTERESANTE con paginación
-    """
+    """API para la tabla de datos - Usa VISTA_DASHBOARD con paginación"""
     try:
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 10))
@@ -168,8 +158,8 @@ def get_table_data():
         conn = get_connection()
         cursor = conn.cursor()
         
-        count_query = 'SELECT COUNT(*) FROM VISTA_MUY_INTERESANTE WHERE 1=1'
-        data_query = 'SELECT * FROM (SELECT a.*, ROWNUM rnum FROM (SELECT * FROM VISTA_MUY_INTERESANTE WHERE 1=1'
+        count_query = 'SELECT COUNT(*) FROM VISTA_DASHBOARD WHERE 1=1'
+        data_query = 'SELECT * FROM (SELECT a.*, ROWNUM rnum FROM (SELECT * FROM VISTA_DASHBOARD WHERE 1=1'
         params = []
         
         filter_clause = ''
@@ -238,22 +228,17 @@ def get_table_data():
 @app.route('/table')
 @login_required
 def table_view():
-    """
-    Vista de tabla - Obtiene filtros desde las tablas normalizadas
-    """
+    """Vista de tabla"""
     try:
         conn = get_connection()
         cursor = conn.cursor()
         
-        # Obtener comunidades desde la tabla normalizada
         cursor.execute('SELECT nombre_comunidad FROM COMUNIDADES ORDER BY nombre_comunidad')
         comunidades = [row[0] for row in cursor.fetchall()]
         
-        # Obtener sexos distintos desde INGRESOS
         cursor.execute('SELECT DISTINCT sexo FROM INGRESOS WHERE sexo IS NOT NULL ORDER BY sexo')
         sexos = [row[0] for row in cursor.fetchall()]
         
-        # Obtener categorías desde la tabla normalizada
         cursor.execute('SELECT nombre_categoria FROM CATEGORIAS_DIAGNOSTICO ORDER BY nombre_categoria')
         categorias = [row[0] for row in cursor.fetchall()]
         
