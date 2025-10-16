@@ -147,88 +147,83 @@ def get_data():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/data')
+@app.route('/api/table')
 @login_required
-def get_data():
-    """API para obtener datos del dashboard - Usa VISTA_DASHBOARD"""
+def get_table_data():
+    """API para la tabla de datos - Usa VISTA_DASHBOARD con paginación"""
     try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 10))
+        
         conn = get_connection()
         cursor = conn.cursor()
         
-        # Usar VISTA_DASHBOARD (para el dashboard de la app)
-        query = 'SELECT * FROM VISTA_DASHBOARD WHERE 1=1'
+        count_query = 'SELECT COUNT(*) FROM VISTA_DASHBOARD WHERE 1=1'
+        data_query = 'SELECT * FROM (SELECT a.*, ROWNUM rnum FROM (SELECT * FROM VISTA_DASHBOARD WHERE 1=1'
         params = []
         
+        filter_clause = ''
         comunidad = request.args.get('comunidad')
         if comunidad:
-            query += ' AND comunidad_atencion = :1'
+            filter_clause += ' AND comunidad_atencion = :1'
             params.append(comunidad)
         
         sexo = request.args.get('sexo')
         if sexo:
-            query += f' AND sexo = :{len(params) + 1}'
+            filter_clause += f' AND sexo = :{len(params) + 1}'
             params.append(sexo)
         
         categoria = request.args.get('categoria')
         if categoria:
-            query += f' AND categoria_diagnostico = :{len(params) + 1}'
+            filter_clause += f' AND categoria_diagnostico = :{len(params) + 1}'
             params.append(categoria)
         
         fecha_inicio = request.args.get('fecha_inicio')
         if fecha_inicio:
-            query += f' AND fecha_ingreso >= :{len(params) + 1}'
+            filter_clause += f' AND fecha_ingreso >= :{len(params) + 1}'
             params.append(fecha_inicio)
         
         fecha_fin = request.args.get('fecha_fin')
         if fecha_fin:
-            query += f' AND fecha_ingreso <= :{len(params) + 1}'
+            filter_clause += f' AND fecha_ingreso <= :{len(params) + 1}'
             params.append(fecha_fin)
         
+        count_query += filter_clause
         if params:
-            cursor.execute(query, params)
+            cursor.execute(count_query, params)
         else:
-            cursor.execute(query)
+            cursor.execute(count_query)
+        total = cursor.fetchone()[0]
         
-        columns = [desc[0] for desc in cursor.description]
-        data = cursor.fetchall()
-        df = pd.DataFrame(data, columns=columns)
+        offset = (page - 1) * per_page
+        data_query += filter_clause + f') a WHERE ROWNUM <= {offset + per_page}) WHERE rnum > {offset}'
+        
+        if params:
+            cursor.execute(data_query, params)
+        else:
+            cursor.execute(data_query)
+        
+        columns = [desc[0] for desc in cursor.description if desc[0] != 'RNUM']
+        rows = cursor.fetchall()
+        
+        items = []
+        for row in rows:
+            item = {columns[i]: row[i] for i in range(len(columns))}
+            items.append(item)
         
         cursor.close()
         conn.close()
         
-        if df.empty:
-            return jsonify({'error': 'No se encontraron datos con los filtros seleccionados'})
-        
-        # Calcular pacientes UCI basándose solo en dias_uci
-        if 'DIAS_UCI' in df.columns:
-            # Convertir a numérico y filtrar valores válidos (> 0)
-            df['DIAS_UCI_NUM'] = pd.to_numeric(df['DIAS_UCI'], errors='coerce')
-            pacientes_uci = int((df['DIAS_UCI_NUM'] > 0).sum())
-            dias_uci_promedio = float(df[df['DIAS_UCI_NUM'] > 0]['DIAS_UCI_NUM'].mean()) if pacientes_uci > 0 else 0
-        else:
-            pacientes_uci = 0
-            dias_uci_promedio = 0
-        
         result = {
-            'comunidades': df['COMUNIDAD_ATENCION'].value_counts().to_dict() if 'COMUNIDAD_ATENCION' in df.columns else {},
-            'sexos': df['SEXO'].value_counts().to_dict() if 'SEXO' in df.columns else {},
-            'categorias': df['CATEGORIA_DIAGNOSTICO'].value_counts().to_dict() if 'CATEGORIA_DIAGNOSTICO' in df.columns else {},
-            'ingresos_por_mes': df['MES_INGRESO'].value_counts().sort_index().to_dict() if 'MES_INGRESO' in df.columns else {},
-            'estancia_promedio': float(df['ESTANCIA_DIAS'].replace([None, 'NULL', ''], np.nan).astype(float).mean()) if 'ESTANCIA_DIAS' in df.columns else 0,
-            'coste_total': float(df['COSTE_APR'].replace([None, 'NULL', ''], np.nan).astype(float).sum()) if 'COSTE_APR' in df.columns else 0,
-            'ingresos_uci': {'Sin UCI': len(df) - pacientes_uci, 'Con UCI': pacientes_uci} if 'DIAS_UCI' in df.columns else {},
-            'pacientes_uci': pacientes_uci,
-            'dias_uci_promedio': dias_uci_promedio if not pd.isna(dias_uci_promedio) else 0
+            'items': items,
+            'total': total,
+            'pages': (total + per_page - 1) // per_page,
+            'current_page': page
         }
-        
-        for key in result:
-            if isinstance(result[key], float) and pd.isna(result[key]):
-                result[key] = 0
         
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 
 @app.route('/table')
 @login_required
