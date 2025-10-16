@@ -18,3 +18,6 @@ class Config:
     # Wallet config
     WALLET_LOCATION = os.environ.get('WALLET_LOCATION')
     WALLET_PASSWORD = os.environ.get('WALLET_PASSWORD')
+    
+    # Google Gemini API
+    GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')

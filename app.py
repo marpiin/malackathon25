@@ -4,9 +4,22 @@ import pandas as pd
 import numpy as np
 import oracledb
 import config
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object(config.Config)
+
+# Configurar Gemini
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+if GOOGLE_API_KEY:
+    genai.configure(api_key=GOOGLE_API_KEY)
+    gemini_model = genai.GenerativeModel("gemini-2.0-flash-exp")
+else:
+    gemini_model = None
 
 def get_connection():
     return oracledb.connect(
@@ -273,6 +286,103 @@ def table_view():
         return render_template('data_table.html', comunidades=comunidades, sexos=sexos, categorias=categorias)
     except Exception as e:
         return f"Error: {str(e)}", 500
+
+@app.route('/chat')
+@login_required
+def chat_view():
+    return render_template('chat.html')
+
+@app.route('/api/chat', methods=['POST'])
+@login_required
+def chat_api():
+    try:
+        if not gemini_model:
+            return jsonify({'error': 'El servicio de IA no está configurado. Por favor, configura GOOGLE_API_KEY.'}), 500
+        
+        data = request.get_json()
+        question = data.get('question', '')
+        
+        if not question:
+            return jsonify({'error': 'Por favor, proporciona una pregunta.'}), 400
+        
+        # Obtener el esquema de la base de datos
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        ORACLE_USER = app.config['DB_USER']
+        
+        cursor.execute(f"""
+            SELECT table_name, column_name
+            FROM all_tab_columns
+            WHERE owner = UPPER('{ORACLE_USER}')
+            ORDER BY table_name, column_id
+        """)
+        
+        esquema = {}
+        for table, column in cursor:
+            esquema.setdefault(table, []).append(column)
+        
+        esquema_texto = "\n".join(
+            f"{tabla}({', '.join(columnas)})" for tabla, columnas in esquema.items()
+        )
+        
+        # Generar SQL con Gemini
+        prompt_sql = f"""
+Eres un asistente experto en SQL para Oracle. Genera solo la consulta SQL compatible con Oracle.
+Usa este esquema de base de datos:
+{esquema_texto}
+
+IMPORTANTE: 
+- La vista VISTA_DASHBOARD contiene todos los datos principales agregados
+- Para contar pacientes, usa COUNT(*) o COUNT(DISTINCT id_columna)
+- Para promedios, usa AVG()
+- Para sumas, usa SUM()
+- NO uses punto y coma al final
+- NO uses saltos de línea innecesarios
+- Devuelve SOLO la consulta SQL, sin explicaciones
+
+Pregunta del usuario:
+{question}
+"""
+        
+        raw_sql = gemini_model.generate_content(prompt_sql)
+        sql_generado = raw_sql.text.strip().strip("```sql").strip("```").strip()
+        sql_generado = sql_generado.replace(";", "")
+        sql_generado = sql_generado.replace("\n", " ").replace("\t", " ")
+        
+        # Ejecutar SQL
+        cursor.execute(sql_generado)
+        resultados = cursor.fetchall()
+        columnas = [col[0] for col in cursor.description]
+        
+        df = pd.DataFrame(resultados, columns=columnas)
+        texto_resultado = df.to_markdown(index=False)
+        
+        cursor.close()
+        conn.close()
+        
+        # Interpretar resultados con Gemini
+        prompt_explicacion = f"""
+Eres un experto en análisis de datos de salud mental. Resume e interpreta los resultados de una consulta SQL de forma clara y concisa.
+
+Pregunta original: {question}
+Resultados:
+{texto_resultado}
+
+Proporciona una respuesta natural y fácil de entender, mencionando los datos más relevantes.
+Usa emojis para hacer la respuesta más amigable (📊, 👥, 💰, 🏥, etc).
+"""
+        
+        response = gemini_model.generate_content(prompt_explicacion)
+        answer = response.text.strip()
+        
+        return jsonify({
+            'answer': answer,
+            'sql_query': sql_generado
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
