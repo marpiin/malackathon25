@@ -1,7 +1,7 @@
 :root {
     /* Nueva paleta profesional con mejor contraste */
     --primary-color: #2C3E50;        /* Azul oscuro elegante */
-    --secondary-color: #34495E;      /* Azul grisáceo */
+    --secondary-color: #6e849a;      /* Azul grisáceo */
     --accent-color: #1ABC9C;         /* Verde agua/turquesa */
     --accent-dark: #16A085;          /* Verde agua oscuro */
     --success-color: #27AE60;        /* Verde éxito */
@@ -11,7 +11,7 @@
     --light-bg: #ECF0F1;             /* Fondo claro */
     --white: #FFFFFF;
     --text-dark: #1C2833;            /* Texto oscuro mejorado */
-    --text-medium: #34495E;          /* Texto medio */
+    --text-medium: #d7d7d7;          /* Texto medio */
     --text-muted: #5D6D7E;           /* Texto secundario mejorado */
     --border-color: #BDC3C7;
     --shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
