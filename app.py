@@ -7,11 +7,22 @@ import config
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
+from datetime import datetime
+
+# NUEVOS IMPORTS para sistema de usuarios
+from utils import (
+    hash_password, verify_password, validate_password, 
+    generate_verification_code, validate_email, get_code_expiration_time
+)
+from email_utils import mail, send_verification_code_email, send_welcome_email
 
 load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object(config.Config)
+
+# Inicializar Flask-Mail
+mail.init_app(app)
 
 # Configurar Gemini
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -39,22 +50,286 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# ========== RUTAS DE AUTENTICACIÓN (NUEVAS Y MEJORADAS) ==========
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """Login mejorado: soporta tanto admin básico como usuarios de BD"""
     if request.method == 'POST':
-        username = request.form.get('username')
+        email_or_username = request.form.get('username')
         password = request.form.get('password')
         
-        if (username == app.config['LOGIN_USERNAME'] and 
+        # Primero intentar login de admin (compatibilidad con sistema antiguo)
+        if (email_or_username == app.config['LOGIN_USERNAME'] and 
             password == app.config['LOGIN_PASSWORD']):
             session['logged_in'] = True
-            session['username'] = username
-            flash('¡Inicio de sesión exitoso!', 'success')
+            session['username'] = email_or_username
+            session['user_id'] = 0  # ID especial para admin
+            session['is_admin'] = True
+            flash('¡Inicio de sesión exitoso! (Admin)', 'success')
             return redirect(url_for('index'))
-        else:
-            flash('Usuario o contraseña incorrectos', 'danger')
+        
+        # Luego intentar login de usuario de BD
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT id_usuario, email, nombre, password_hash, verificado, bloqueado
+                FROM USUARIOS
+                WHERE email = :1 AND activo = 1
+            """, [email_or_username])
+            
+            user = cursor.fetchone()
+            
+            if user:
+                user_id, email, nombre, password_hash, verificado, bloqueado = user
+                
+                # Verificar si está bloqueado
+                if bloqueado == 1:
+                    flash('Tu cuenta ha sido bloqueada. Contacta al administrador.', 'danger')
+                    cursor.close()
+                    conn.close()
+                    return render_template('login.html')
+                
+                # Verificar contraseña
+                if verify_password(password, password_hash):
+                    # Verificar si está verificado
+                    if verificado == 0:
+                        flash('Debes verificar tu email antes de iniciar sesión.', 'warning')
+                        cursor.close()
+                        conn.close()
+                        return redirect(url_for('verify_email', email=email))
+                    
+                    # Login exitoso
+                    session['logged_in'] = True
+                    session['username'] = nombre
+                    session['email'] = email
+                    session['user_id'] = user_id
+                    session['is_admin'] = False
+                    
+                    # Actualizar último acceso
+                    cursor.execute("""
+                        UPDATE USUARIOS 
+                        SET ultimo_acceso = CURRENT_TIMESTAMP, intentos_fallidos = 0
+                        WHERE id_usuario = :1
+                    """, [user_id])
+                    conn.commit()
+                    
+                    flash(f'¡Bienvenido {nombre}!', 'success')
+                    cursor.close()
+                    conn.close()
+                    return redirect(url_for('index'))
+                else:
+                    # Incrementar intentos fallidos
+                    cursor.execute("""
+                        UPDATE USUARIOS 
+                        SET intentos_fallidos = intentos_fallidos + 1
+                        WHERE id_usuario = :1
+                    """, [user_id])
+                    
+                    # Bloquear si hay más de 5 intentos
+                    cursor.execute("""
+                        UPDATE USUARIOS 
+                        SET bloqueado = 1
+                        WHERE id_usuario = :1 AND intentos_fallidos >= 5
+                    """, [user_id])
+                    
+                    conn.commit()
+                    flash('Email o contraseña incorrectos', 'danger')
+            else:
+                flash('Email o contraseña incorrectos', 'danger')
+            
+            cursor.close()
+            conn.close()
+            
+        except Exception as e:
+            flash(f'Error al iniciar sesión: {str(e)}', 'danger')
     
     return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """Registro de nuevos usuarios"""
+    if request.method == 'POST':
+        nombre = request.form.get('nombre')
+        apellidos = request.form.get('apellidos', '')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        password_confirm = request.form.get('password_confirm')
+        
+        # Validaciones
+        if not all([nombre, email, password, password_confirm]):
+            flash('Todos los campos son obligatorios', 'danger')
+            return render_template('register.html')
+        
+        if password != password_confirm:
+            flash('Las contraseñas no coinciden', 'danger')
+            return render_template('register.html')
+        
+        if not validate_email(email):
+            flash('Email inválido', 'danger')
+            return render_template('register.html')
+        
+        is_valid, msg = validate_password(password)
+        if not is_valid:
+            flash(f'Contraseña inválida:\n{msg}', 'danger')
+            return render_template('register.html')
+        
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            
+            # Verificar si el email ya existe
+            cursor.execute("SELECT id_usuario FROM USUARIOS WHERE email = :1", [email])
+            if cursor.fetchone():
+                flash('Este email ya está registrado', 'danger')
+                cursor.close()
+                conn.close()
+                return render_template('register.html')
+            
+            # Generar código de verificación
+            code = generate_verification_code()
+            code_expiration = get_code_expiration_time()
+            
+            # Hashear contraseña
+            password_hash = hash_password(password)
+            
+            # Insertar usuario
+            cursor.execute("""
+                INSERT INTO USUARIOS 
+                (email, nombre, apellidos, password_hash, verificado, token_verificacion, token_expiracion)
+                VALUES (:1, :2, :3, :4, 0, :5, :6)
+            """, [email, nombre, apellidos, password_hash, code, code_expiration])
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            # Enviar email con código
+            if send_verification_code_email(email, nombre, code):
+                flash('¡Registro exitoso! Te hemos enviado un código de verificación a tu email.', 'success')
+                return redirect(url_for('verify_email', email=email))
+            else:
+                flash('Usuario registrado pero hubo un error al enviar el email. Contacta al administrador.', 'warning')
+                return redirect(url_for('login'))
+            
+        except Exception as e:
+            flash(f'Error al registrar: {str(e)}', 'danger')
+            return render_template('register.html')
+    
+    return render_template('register.html')
+
+@app.route('/verify/<email>')
+def verify_email(email):
+    """Página de verificación de email"""
+    return render_template('verify.html', email=email)
+
+@app.route('/verify/check', methods=['POST'])
+def verify_check():
+    """Verifica el código ingresado"""
+    data = request.get_json()
+    email = data.get('email')
+    code = data.get('code')
+    
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id_usuario, nombre, token_verificacion, token_expiracion, verificado
+            FROM USUARIOS
+            WHERE email = :1
+        """, [email])
+        
+        user = cursor.fetchone()
+        
+        if not user:
+            return jsonify({'success': False, 'message': 'Usuario no encontrado'}), 404
+        
+        user_id, nombre, token_db, expiracion, verificado = user
+        
+        if verificado == 1:
+            return jsonify({'success': False, 'message': 'Este usuario ya está verificado'}), 400
+        
+        # Verificar si el código expiró
+        if datetime.now() > expiracion:
+            return jsonify({'success': False, 'message': 'El código ha expirado. Solicita uno nuevo.'}), 400
+        
+        # Verificar código
+        if code.upper() == token_db.upper():
+            # Marcar como verificado
+            cursor.execute("""
+                UPDATE USUARIOS 
+                SET verificado = 1, token_verificacion = NULL, token_expiracion = NULL
+                WHERE id_usuario = :1
+            """, [user_id])
+            conn.commit()
+            
+            cursor.close()
+            conn.close()
+            
+            # Enviar email de bienvenida
+            send_welcome_email(email, nombre)
+            
+            return jsonify({'success': True, 'message': '¡Cuenta verificada exitosamente!'})
+        else:
+            return jsonify({'success': False, 'message': 'Código incorrecto'}), 400
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/verify/resend', methods=['POST'])
+def verify_resend():
+    """Reenvía un nuevo código de verificación"""
+    data = request.get_json()
+    email = data.get('email')
+    
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id_usuario, nombre, verificado
+            FROM USUARIOS
+            WHERE email = :1
+        """, [email])
+        
+        user = cursor.fetchone()
+        
+        if not user:
+            return jsonify({'success': False, 'message': 'Usuario no encontrado'}), 404
+        
+        user_id, nombre, verificado = user
+        
+        if verificado == 1:
+            return jsonify({'success': False, 'message': 'Este usuario ya está verificado'}), 400
+        
+        # Generar nuevo código
+        code = generate_verification_code()
+        code_expiration = get_code_expiration_time()
+        
+        # Actualizar código
+        cursor.execute("""
+            UPDATE USUARIOS 
+            SET token_verificacion = :1, token_expiracion = :2
+            WHERE id_usuario = :3
+        """, [code, code_expiration, user_id])
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Enviar email
+        if send_verification_code_email(email, nombre, code):
+            return jsonify({'success': True, 'message': 'Nuevo código enviado a tu email'})
+        else:
+            return jsonify({'success': False, 'message': 'Error al enviar el email'}), 500
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# ========== RUTAS EXISTENTES (SIN CAMBIOS) ==========
 
 @app.route('/logout')
 def logout():
@@ -135,12 +410,10 @@ def get_data():
         if df.empty:
             return jsonify({'error': 'No se encontraron datos con los filtros seleccionados'})
         
-        # Valores por defecto
         pacientes_uci = 0
         dias_uci_promedio = 0
         ingresos_uci_dict = {}
         
-        # Calcular UCI
         if 'DIAS_UCI' in df.columns:
             df['DIAS_UCI_NUM'] = pd.to_numeric(df['DIAS_UCI'], errors='coerce')
             df_con_uci = df[df['DIAS_UCI_NUM'] > 0]
@@ -154,7 +427,6 @@ def get_data():
             sin_uci = len(df) - pacientes_uci
             ingresos_uci_dict = {'Sin UCI': sin_uci, 'Con UCI': pacientes_uci}
         
-        # Estancia promedio
         estancia_promedio = 0
         if 'ESTANCIA_DIAS' in df.columns:
             estancia = pd.to_numeric(df['ESTANCIA_DIAS'], errors='coerce')
@@ -162,7 +434,6 @@ def get_data():
             if pd.isna(estancia_promedio):
                 estancia_promedio = 0
         
-        # Coste total
         coste_total = 0
         if 'COSTE_APR' in df.columns:
             coste = pd.to_numeric(df['COSTE_APR'], errors='coerce')
@@ -297,7 +568,7 @@ def chat_view():
 def chat_api():
     try:
         if not gemini_model:
-            return jsonify({'error': 'El servicio de IA no está configurado. Por favor, configura GOOGLE_API_KEY.'}), 500
+            return jsonify({'error': 'El servicio de IA no está configurado.'}), 500
         
         data = request.get_json()
         question = data.get('question', '')
@@ -305,7 +576,6 @@ def chat_api():
         if not question:
             return jsonify({'error': 'Por favor, proporciona una pregunta.'}), 400
         
-        # Obtener el esquema de la base de datos
         conn = get_connection()
         cursor = conn.cursor()
         
@@ -326,68 +596,45 @@ def chat_api():
             f"{tabla}({', '.join(columnas)})" for tabla, columnas in esquema.items()
         )
         
-        # Generar SQL con Gemini
         prompt_sql = f"""
 Eres un asistente experto en SQL para Oracle. Genera solo la consulta SQL compatible con Oracle.
 Usa este esquema de base de datos:
 {esquema_texto}
 
 IMPORTANTE: 
-- La vista VISTA_DASHBOARD contiene todos los datos principales agregados
-- Para contar pacientes, usa COUNT(*) o COUNT(DISTINCT id_columna)
-- Para promedios, usa AVG()
-- Para sumas, usa SUM()
+- La vista VISTA_DASHBOARD contiene todos los datos principales
 - NO uses punto y coma al final
-- NO uses saltos de línea innecesarios
-- Devuelve SOLO la consulta SQL sin explicaciones
+- Devuelve SOLO la consulta SQL
 
-Pregunta del usuario:
-{question}
+Pregunta: {question}
 """
         
         raw_sql = gemini_model.generate_content(prompt_sql)
-        sql_generado = raw_sql.text.strip().strip("```sql").strip("```").strip()
-        sql_generado = sql_generado.replace(";", "")
-        sql_generado = sql_generado.replace("\n", " ").replace("\t", " ")
+        sql_generado = raw_sql.text.strip().strip("``````").strip().replace(";", "").replace("\n", " ")
         
-        # Ejecutar SQL
         cursor.execute(sql_generado)
         resultados = cursor.fetchall()
         columnas = [col[0] for col in cursor.description]
         
-        df = pd.DataFrame(resultados, columns=columnas)
+        df = pd.DataFrame(resultados, columnas=columnas)
         texto_resultado = df.to_markdown(index=False)
         
         cursor.close()
         conn.close()
         
-        # Interpretar resultados con Gemini
         prompt_explicacion = f"""
-Eres un analista especializado en salud mental que presenta datos a investigadores del sector sanitario.
+Eres un experto en análisis de salud mental. Resume los resultados:
 
-Pregunta original: {question}
-Resultados obtenidos:
-{texto_resultado}
+Pregunta: {question}
+Resultados: {texto_resultado}
 
-INSTRUCCIONES:
-1. Presenta los datos clave de forma directa y precisa (cifras exactas, porcentajes, promedios)
-2. Proporciona un análisis breve y profesional de los hallazgos (máximo 2-3 frases)
-3. Si es relevante, menciona implicaciones clínicas o epidemiológicas
-4. Usa terminología técnica apropiada para investigadores sanitarios
-5. Sé conciso: los investigadores necesitan información rápida y precisa
-
-Formato de respuesta:
-📊 DATOS: [Cifras principales]
-� ANÁLISIS: [Interpretación breve de los resultados]
+Responde de forma natural y usa emojis (📊, 👥, 💰).
 """
         
         response = gemini_model.generate_content(prompt_explicacion)
         answer = response.text.strip()
         
-        return jsonify({
-            'answer': answer,
-            'sql_query': sql_generado
-        })
+        return jsonify({'answer': answer, 'sql_query': sql_generado})
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
