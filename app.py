@@ -54,17 +54,23 @@ def logout():
 @app.route('/')
 @login_required
 def index():
+    """
+    Página principal - Obtiene filtros desde las tablas normalizadas
+    """
     try:
         conn = get_connection()
         cursor = conn.cursor()
         
-        cursor.execute('SELECT DISTINCT "Comunidad Autónoma" FROM ENFERMEDADESMENTALESDIAGNOSTICO WHERE "Comunidad Autónoma" IS NOT NULL')
+        # Obtener comunidades desde la tabla normalizada
+        cursor.execute('SELECT nombre_comunidad FROM COMUNIDADES ORDER BY nombre_comunidad')
         comunidades = [row[0] for row in cursor.fetchall()]
         
-        cursor.execute('SELECT DISTINCT SEXO FROM ENFERMEDADESMENTALESDIAGNOSTICO WHERE SEXO IS NOT NULL')
+        # Obtener sexos distintos desde INGRESOS
+        cursor.execute('SELECT DISTINCT sexo FROM INGRESOS WHERE sexo IS NOT NULL ORDER BY sexo')
         sexos = [row[0] for row in cursor.fetchall()]
         
-        cursor.execute('SELECT DISTINCT "Categoría" FROM ENFERMEDADESMENTALESDIAGNOSTICO WHERE "Categoría" IS NOT NULL')
+        # Obtener categorías desde la tabla normalizada
+        cursor.execute('SELECT nombre_categoria FROM CATEGORIAS_DIAGNOSTICO ORDER BY nombre_categoria')
         categorias = [row[0] for row in cursor.fetchall()]
         
         cursor.close()
@@ -77,36 +83,40 @@ def index():
 @app.route('/api/data')
 @login_required
 def get_data():
+    """
+    API para obtener datos del dashboard - Usa la vista normalizada
+    """
     try:
         conn = get_connection()
         cursor = conn.cursor()
         
-        query = 'SELECT * FROM ENFERMEDADESMENTALESDIAGNOSTICO WHERE 1=1'
+        # Usar la vista VISTAMUYINTERESANTE que tiene todos los JOINs
+        query = 'SELECT * FROM VISTAMUYINTERESANTE WHERE 1=1'
         params = []
         
         comunidad = request.args.get('comunidad')
         if comunidad:
-            query += ' AND "Comunidad Autónoma" = :1'
+            query += ' AND comunidad_atencion = :1'
             params.append(comunidad)
         
         sexo = request.args.get('sexo')
         if sexo:
-            query += f' AND SEXO = :{len(params) + 1}'
+            query += f' AND sexo = :{len(params) + 1}'
             params.append(sexo)
         
         categoria = request.args.get('categoria')
         if categoria:
-            query += f' AND "Categoría" = :{len(params) + 1}'
+            query += f' AND categoria_diagnostico = :{len(params) + 1}'
             params.append(categoria)
         
         fecha_inicio = request.args.get('fecha_inicio')
         if fecha_inicio:
-            query += f' AND FECHA_DE_INGRESO >= :{len(params) + 1}'
+            query += f' AND fecha_ingreso >= :{len(params) + 1}'
             params.append(fecha_inicio)
         
         fecha_fin = request.args.get('fecha_fin')
         if fecha_fin:
-            query += f' AND FECHA_DE_INGRESO <= :{len(params) + 1}'
+            query += f' AND fecha_ingreso <= :{len(params) + 1}'
             params.append(fecha_fin)
         
         if params:
@@ -124,16 +134,17 @@ def get_data():
         if df.empty:
             return jsonify({'error': 'No se encontraron datos con los filtros seleccionados'})
         
+        # Adaptar nombres de columnas de la vista a los que espera el frontend
         result = {
-            'comunidades': df['Comunidad Autónoma'].value_counts().to_dict() if 'Comunidad Autónoma' in df.columns else {},
+            'comunidades': df['COMUNIDAD_ATENCION'].value_counts().to_dict() if 'COMUNIDAD_ATENCION' in df.columns else {},
             'sexos': df['SEXO'].value_counts().to_dict() if 'SEXO' in df.columns else {},
-            'categorias': df['Categoría'].value_counts().to_dict() if 'Categoría' in df.columns else {},
-            'ingresos_por_mes': df['MES_DE_INGRESO'].value_counts().sort_index().to_dict() if 'MES_DE_INGRESO' in df.columns else {},
-            'estancia_promedio': float(df['Estancia Días'].replace([None, 'NULL', ''], np.nan).astype(float).mean()) if 'Estancia Días' in df.columns else 0,
+            'categorias': df['CATEGORIA_DIAGNOSTICO'].value_counts().to_dict() if 'CATEGORIA_DIAGNOSTICO' in df.columns else {},
+            'ingresos_por_mes': df['MES_INGRESO'].value_counts().sort_index().to_dict() if 'MES_INGRESO' in df.columns else {},
+            'estancia_promedio': float(df['ESTANCIA_DIAS'].replace([None, 'NULL', ''], np.nan).astype(float).mean()) if 'ESTANCIA_DIAS' in df.columns else 0,
             'coste_total': float(df['COSTE_APR'].replace([None, 'NULL', ''], np.nan).astype(float).sum()) if 'COSTE_APR' in df.columns else 0,
             'ingresos_uci': df['INGRESO_EN_UCI'].value_counts().to_dict() if 'INGRESO_EN_UCI' in df.columns else {},
             'pacientes_uci': int(df[df['INGRESO_EN_UCI'] == 'Sí'].shape[0]) if 'INGRESO_EN_UCI' in df.columns else 0,
-            'dias_uci_promedio': float(df[df['INGRESO_EN_UCI'] == 'Sí']['Días UCI'].replace([None, 'NULL', ''], np.nan).astype(float).mean()) if 'INGRESO_EN_UCI' in df.columns and 'Días UCI' in df.columns else 0
+            'dias_uci_promedio': float(df[df['INGRESO_EN_UCI'] == 'Sí']['DIAS_UCI'].replace([None, 'NULL', ''], np.nan).astype(float).mean()) if 'INGRESO_EN_UCI' in df.columns and 'DIAS_UCI' in df.columns else 0
         }
         
         for key in result:
@@ -147,6 +158,9 @@ def get_data():
 @app.route('/api/table')
 @login_required
 def get_table_data():
+    """
+    API para la tabla de datos - Usa la vista normalizada con paginación
+    """
     try:
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 10))
@@ -154,34 +168,34 @@ def get_table_data():
         conn = get_connection()
         cursor = conn.cursor()
         
-        count_query = 'SELECT COUNT(*) FROM ENFERMEDADESMENTALESDIAGNOSTICO WHERE 1=1'
-        data_query = 'SELECT * FROM (SELECT a.*, ROWNUM rnum FROM (SELECT * FROM ENFERMEDADESMENTALESDIAGNOSTICO WHERE 1=1'
+        count_query = 'SELECT COUNT(*) FROM VISTAMUYINTERESANTE WHERE 1=1'
+        data_query = 'SELECT * FROM (SELECT a.*, ROWNUM rnum FROM (SELECT * FROM VISTAMUYINTERESANTE WHERE 1=1'
         params = []
         
         filter_clause = ''
         comunidad = request.args.get('comunidad')
         if comunidad:
-            filter_clause += ' AND "Comunidad Autónoma" = :1'
+            filter_clause += ' AND comunidad_atencion = :1'
             params.append(comunidad)
         
         sexo = request.args.get('sexo')
         if sexo:
-            filter_clause += f' AND SEXO = :{len(params) + 1}'
+            filter_clause += f' AND sexo = :{len(params) + 1}'
             params.append(sexo)
         
         categoria = request.args.get('categoria')
         if categoria:
-            filter_clause += f' AND "Categoría" = :{len(params) + 1}'
+            filter_clause += f' AND categoria_diagnostico = :{len(params) + 1}'
             params.append(categoria)
         
         fecha_inicio = request.args.get('fecha_inicio')
         if fecha_inicio:
-            filter_clause += f' AND FECHA_DE_INGRESO >= :{len(params) + 1}'
+            filter_clause += f' AND fecha_ingreso >= :{len(params) + 1}'
             params.append(fecha_inicio)
         
         fecha_fin = request.args.get('fecha_fin')
         if fecha_fin:
-            filter_clause += f' AND FECHA_DE_INGRESO <= :{len(params) + 1}'
+            filter_clause += f' AND fecha_ingreso <= :{len(params) + 1}'
             params.append(fecha_fin)
         
         count_query += filter_clause
@@ -224,17 +238,23 @@ def get_table_data():
 @app.route('/table')
 @login_required
 def table_view():
+    """
+    Vista de tabla - Obtiene filtros desde las tablas normalizadas
+    """
     try:
         conn = get_connection()
         cursor = conn.cursor()
         
-        cursor.execute('SELECT DISTINCT "Comunidad Autónoma" FROM ENFERMEDADESMENTALESDIAGNOSTICO WHERE "Comunidad Autónoma" IS NOT NULL')
+        # Obtener comunidades desde la tabla normalizada
+        cursor.execute('SELECT nombre_comunidad FROM COMUNIDADES ORDER BY nombre_comunidad')
         comunidades = [row[0] for row in cursor.fetchall()]
         
-        cursor.execute('SELECT DISTINCT SEXO FROM ENFERMEDADESMENTALESDIAGNOSTICO WHERE SEXO IS NOT NULL')
+        # Obtener sexos distintos desde INGRESOS
+        cursor.execute('SELECT DISTINCT sexo FROM INGRESOS WHERE sexo IS NOT NULL ORDER BY sexo')
         sexos = [row[0] for row in cursor.fetchall()]
         
-        cursor.execute('SELECT DISTINCT "Categoría" FROM ENFERMEDADESMENTALESDIAGNOSTICO WHERE "Categoría" IS NOT NULL')
+        # Obtener categorías desde la tabla normalizada
+        cursor.execute('SELECT nombre_categoria FROM CATEGORIAS_DIAGNOSTICO ORDER BY nombre_categoria')
         categorias = [row[0] for row in cursor.fetchall()]
         
         cursor.close()
