@@ -9,81 +9,123 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2C3E50 0%, #1ABC9C 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
         }
         .login-card {
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
             overflow: hidden;
-            max-width: 400px;
+            max-width: 440px;
             width: 100%;
-            animation: slideIn 0.5s ease;
+            animation: slideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         }
         @keyframes slideIn {
             from { transform: translateY(-50px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
         .login-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px 30px;
+            background: linear-gradient(135deg, #2C3E50 0%, #1ABC9C 100%);
+            padding: 3rem 2rem;
             text-align: center;
             color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .login-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
         .login-header i {
-            font-size: 60px;
-            margin-bottom: 15px;
-            animation: pulse 2s infinite;
+            font-size: 70px;
+            margin-bottom: 1rem;
+            animation: float 3s ease-in-out infinite;
+            position: relative;
+            z-index: 1;
         }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .login-header h3 {
+            position: relative;
+            z-index: 1;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .login-header p {
+            position: relative;
+            z-index: 1;
         }
         .login-body {
-            padding: 40px 30px;
+            padding: 2.5rem 2rem;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #2C3E50;
+            margin-bottom: 0.5rem;
         }
         .form-control {
-            border-radius: 10px;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            transition: all 0.3s;
+            border-radius: 12px;
+            padding: 0.875rem 1rem;
+            border: 2px solid #ECF0F1;
+            transition: all 0.3s ease;
+            font-size: 1rem;
         }
         .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            border-color: #1ABC9C;
+            box-shadow: 0 0 0 0.25rem rgba(26, 188, 156, 0.15);
         }
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1ABC9C 0%, #16A085 100%);
             border: none;
-            border-radius: 10px;
-            padding: 12px;
+            border-radius: 12px;
+            padding: 0.875rem;
             font-weight: 600;
-            transition: all 0.3s;
+            font-size: 1.05rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(26, 188, 156, 0.3);
         }
         .btn-primary:hover {
+            background: linear-gradient(135deg, #16A085 0%, #1ABC9C 100%);
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 20px rgba(26, 188, 156, 0.4);
         }
         .register-link {
             text-align: center;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 2px solid #ECF0F1;
         }
         .register-link a {
-            color: #667eea;
+            color: #1ABC9C;
             text-decoration: none;
             font-weight: 600;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
         }
         .register-link a:hover {
-            color: #764ba2;
+            color: #16A085;
             text-decoration: underline;
+        }
+        .alert {
+            border-radius: 12px;
+            border: none;
+            margin-bottom: 1.5rem;
         }
     </style>
 </head>
@@ -91,8 +133,10 @@
     <div class="login-card">
         <div class="login-header">
             <i class="fas fa-brain"></i>
-            <h3 style="margin: 0; font-weight: 600;">Salud Mental Dashboard</h3>
-            <p style="margin: 10px 0 0; opacity: 0.9; font-size: 14px;">Análisis de Datos de Salud Mental</p>
+            <h3>HealthMind Analytics</h3>
+            <p style="margin: 10px 0 0; opacity: 0.95; font-size: 15px;">
+                Sistema de Análisis de Salud Mental
+            </p>
         </div>
         <div class="login-body">
             {% with messages = get_flashed_messages(with_categories=true) %}
