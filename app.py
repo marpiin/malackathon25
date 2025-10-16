@@ -363,14 +363,19 @@ Pregunta del usuario:
         
         # Interpretar resultados con Gemini
         prompt_explicacion = f"""
-Eres un experto en análisis de datos de salud mental. Resume e interpreta los resultados de una consulta SQL de forma clara y concisa.
+Eres un analista de datos especializado en salud mental dirigiéndote a investigadores y profesionales del sector.
 
 Pregunta original: {question}
-Resultados:
+Resultados de la consulta:
 {texto_resultado}
 
-Proporciona una respuesta natural y fácil de entender, mencionando los datos más relevantes.
-Usa emojis para hacer la respuesta más amigable (📊, 👥, 💰, 🏥, etc).
+INSTRUCCIONES:
+- Presenta los datos clave de forma directa y concisa (números, porcentajes, promedios)
+- Proporciona un análisis breve de los hallazgos (2-3 oraciones máximo)
+- Usa terminología técnica apropiada para investigadores de salud mental
+- Menciona posibles implicaciones clínicas o epidemiológicas si son relevantes
+- Sé objetivo y basado en evidencia
+- Formato: Primero los datos, luego el análisis breve
 """
         
         response = gemini_model.generate_content(prompt_explicacion)
