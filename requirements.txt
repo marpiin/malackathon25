@@ -8,3 +8,5 @@ oracledb
 python-dotenv
 google-generativeai
 tabulate
+bcrypt 
+flask-mail 
