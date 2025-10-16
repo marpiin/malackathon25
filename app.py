@@ -84,14 +84,14 @@ def index():
 @login_required
 def get_data():
     """
-    API para obtener datos del dashboard - Usa la vista normalizada
+    API para obtener datos del dashboard - Usa la vista normalizada VISTA_MUY_INTERESANTE
     """
     try:
         conn = get_connection()
         cursor = conn.cursor()
         
-        # Usar la vista VISTAMUYINTERESANTE que tiene todos los JOINs
-        query = 'SELECT * FROM VISTAMUYINTERESANTE WHERE 1=1'
+        # Usar la vista VISTA_MUY_INTERESANTE que tiene todos los JOINs
+        query = 'SELECT * FROM VISTA_MUY_INTERESANTE WHERE 1=1'
         params = []
         
         comunidad = request.args.get('comunidad')
@@ -159,7 +159,7 @@ def get_data():
 @login_required
 def get_table_data():
     """
-    API para la tabla de datos - Usa la vista normalizada con paginación
+    API para la tabla de datos - Usa la vista normalizada VISTA_MUY_INTERESANTE con paginación
     """
     try:
         page = int(request.args.get('page', 1))
@@ -168,8 +168,8 @@ def get_table_data():
         conn = get_connection()
         cursor = conn.cursor()
         
-        count_query = 'SELECT COUNT(*) FROM VISTAMUYINTERESANTE WHERE 1=1'
-        data_query = 'SELECT * FROM (SELECT a.*, ROWNUM rnum FROM (SELECT * FROM VISTAMUYINTERESANTE WHERE 1=1'
+        count_query = 'SELECT COUNT(*) FROM VISTA_MUY_INTERESANTE WHERE 1=1'
+        data_query = 'SELECT * FROM (SELECT a.*, ROWNUM rnum FROM (SELECT * FROM VISTA_MUY_INTERESANTE WHERE 1=1'
         params = []
         
         filter_clause = ''
