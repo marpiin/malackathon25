@@ -33,7 +33,7 @@
     
     .message strong {
         font-weight: 600;
-        color: #2C3E50;
+        color: #1C2833;
     }
     
     .message em {
@@ -56,7 +56,7 @@
         background-color: white;
         border: 2px solid #ECF0F1;
         margin-right: auto;
-        color: #2C3E50;
+        color: #1C2833;
     }
     
     .loading {
@@ -192,7 +192,7 @@
         <div class="card-body">
             <!-- Preguntas de ejemplo -->
             <div class="example-questions">
-                <h6 class="mb-3" style="color: #2C3E50; font-weight: 600;">
+                <h6 class="mb-3" style="color: #34495E; font-weight: 600;">
                     <i class="fas fa-lightbulb me-2" style="color: #1ABC9C;"></i>Preguntas de ejemplo
                 </h6>
                 <button class="btn btn-sm example-btn" onclick="setQuestion(this)">
@@ -214,16 +214,16 @@
             
             <!-- Chat box -->
             <div class="chat-box" id="chatBox">
-                <div class="text-center text-muted">
-                    <i class="fas fa-comments fa-3x mb-3"></i>
-                    <p>Haz una pregunta sobre los datos de salud mental</p>
+                <div class="text-center" style="color: #34495E;">
+                    <i class="fas fa-comments fa-3x mb-3" style="color: #1ABC9C;"></i>
+                    <p style="font-weight: 500;">Haz una pregunta sobre los datos de salud mental</p>
                 </div>
             </div>
             
             <!-- Loading indicator -->
             <div class="loading" id="loading">
                 <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
-                <span class="text-muted">Procesando tu pregunta...</span>
+                <span style="color: #34495E; font-weight: 500;">Procesando tu pregunta...</span>
             </div>
             
             <!-- Input -->
@@ -244,9 +244,9 @@
     
     <!-- Información adicional -->
     <div class="alert alert-warning mt-3" style="border-left: 4px solid #F39C12; background-color: #FEF9E7;">
-        <i class="fas fa-exclamation-triangle me-2" style="color: #F39C12;"></i>
-        <strong style="color: #2C3E50;">Advertencia:</strong> 
-        <span style="color: #2C3E50;">Las respuestas son generadas por inteligencia artificial generativa 
+        <i class="fas fa-exclamation-triangle me-2" style="color: #D68910;"></i>
+        <strong style="color: #1C2833;">Advertencia:</strong> 
+        <span style="color: #1C2833;">Las respuestas son generadas por inteligencia artificial generativa 
         y pueden no ser completamente exactas. Verifica la información cuando sea crítica.</span>
     </div>
 </div>
