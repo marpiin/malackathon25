@@ -568,7 +568,7 @@ def chat_view():
 def chat_api():
     try:
         if not gemini_model:
-            return jsonify({'error': 'El servicio de IA no está configurado.'}), 500
+            return jsonify({'error': 'El servicio de IA no está configurado. Por favor, configura GOOGLE_API_KEY.'}), 500
         
         data = request.get_json()
         question = data.get('question', '')
@@ -576,6 +576,7 @@ def chat_api():
         if not question:
             return jsonify({'error': 'Por favor, proporciona una pregunta.'}), 400
         
+        # Obtener el esquema de la base de datos
         conn = get_connection()
         cursor = conn.cursor()
         
@@ -596,45 +597,68 @@ def chat_api():
             f"{tabla}({', '.join(columnas)})" for tabla, columnas in esquema.items()
         )
         
+        # Generar SQL con Gemini
         prompt_sql = f"""
 Eres un asistente experto en SQL para Oracle. Genera solo la consulta SQL compatible con Oracle.
 Usa este esquema de base de datos:
 {esquema_texto}
 
 IMPORTANTE: 
-- La vista VISTA_DASHBOARD contiene todos los datos principales
+- La vista VISTA_DASHBOARD contiene todos los datos principales agregados
+- Para contar pacientes, usa COUNT(*) o COUNT(DISTINCT id_columna)
+- Para promedios, usa AVG()
+- Para sumas, usa SUM()
 - NO uses punto y coma al final
-- Devuelve SOLO la consulta SQL
+- NO uses saltos de línea innecesarios
+- Devuelve SOLO la consulta SQL, sin explicaciones
 
-Pregunta: {question}
+Pregunta del usuario:
+{question}
 """
         
         raw_sql = gemini_model.generate_content(prompt_sql)
-        sql_generado = raw_sql.text.strip().strip("``````").strip().replace(";", "").replace("\n", " ")
+        sql_generado = raw_sql.text.strip().strip("```sql").strip("```").strip()
+        sql_generado = sql_generado.replace(";", "")
+        sql_generado = sql_generado.replace("\n", " ").replace("\t", " ")
         
+        # Ejecutar SQL
         cursor.execute(sql_generado)
         resultados = cursor.fetchall()
         columnas = [col[0] for col in cursor.description]
         
-        df = pd.DataFrame(resultados, columnas=columnas)
+        df = pd.DataFrame(resultados, columns=columnas)
         texto_resultado = df.to_markdown(index=False)
         
         cursor.close()
         conn.close()
         
+        # Interpretar resultados con Gemini
         prompt_explicacion = f"""
-Eres un experto en análisis de salud mental. Resume los resultados:
+Eres un analista especializado en salud mental que presenta datos a investigadores del sector sanitario.
 
-Pregunta: {question}
-Resultados: {texto_resultado}
+Pregunta original: {question}
+Resultados obtenidos:
+{texto_resultado}
 
-Responde de forma natural y usa emojis (📊, 👥, 💰).
+INSTRUCCIONES:
+1. Presenta los datos clave de forma directa y precisa (cifras exactas, porcentajes, promedios)
+2. Proporciona un análisis breve y profesional de los hallazgos (máximo 2-3 frases)
+3. Si es relevante, menciona implicaciones clínicas o epidemiológicas
+4. Usa terminología técnica apropiada para investigadores sanitarios
+5. Sé conciso: los investigadores necesitan información rápida y precisa
+
+Formato de respuesta:
+📊 DATOS: [Cifras principales]
+� ANÁLISIS: [Interpretación breve de los resultados]
 """
         
         response = gemini_model.generate_content(prompt_explicacion)
         answer = response.text.strip()
         
-        return jsonify({'answer': answer, 'sql_query': sql_generado})
+        return jsonify({
+            'answer': answer,
+            'sql_query': sql_generado
+        })
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
