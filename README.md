@@ -328,6 +328,8 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más d
 - **Alejandro González** - _Desarrollo web + backend + conexión base de datos oracle_ - [alexgo414](https://github.com/alexgo414)
 
 - **Juan José Marín**
+
+- **César Gisbert Martínez**
     
 
 ## 🙏 Agradecimientos
@@ -344,6 +346,8 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más d
 Alejandro González - [@alexgo313](https://x.com/alexgo313) - [alejandro.gonvi@gmail.com](mailto:alejandro.gonvi@gmail.com)
 
 Juan José Marín
+
+César Gisbert Martínez
 
 Link del proyecto: [https://github.com/marpiin/malackathon25](https://github.com/marpiin/malackathon25)
 
