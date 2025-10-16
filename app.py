@@ -339,7 +339,7 @@ IMPORTANTE:
 - Para sumas, usa SUM()
 - NO uses punto y coma al final
 - NO uses saltos de línea innecesarios
-- Devuelve SOLO la consulta SQL, sin explicaciones
+- Devuelve SOLO la consulta SQL sin explicaciones
 
 Pregunta del usuario:
 {question}
