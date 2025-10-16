@@ -9,7 +9,8 @@
     }
     
     .chat-box {
-        height: 500px;
+        height: 400px;
+        max-height: 60vh;
         overflow-y: auto;
         border: 1px solid #dee2e6;
         border-radius: 10px;
@@ -25,6 +26,15 @@
         max-width: 80%;
         word-wrap: break-word;
         animation: fadeIn 0.3s;
+        line-height: 1.6;
+    }
+    
+    .message strong {
+        font-weight: 600;
+    }
+    
+    .message em {
+        font-style: italic;
     }
     
     @keyframes fadeIn {
@@ -43,17 +53,6 @@
         background-color: white;
         border: 1px solid #dee2e6;
         margin-right: auto;
-    }
-    
-    .sql-query {
-        background-color: #f1f3f5;
-        border-left: 4px solid #007bff;
-        padding: 10px;
-        margin: 10px 0;
-        font-family: 'Courier New', monospace;
-        font-size: 0.9rem;
-        border-radius: 5px;
-        overflow-x: auto;
     }
     
     .loading {
@@ -112,6 +111,39 @@
     .example-btn {
         margin: 5px;
         font-size: 0.85rem;
+    }
+    
+    /* Responsive styles */
+    @media (max-width: 768px) {
+        .chat-container {
+            padding: 0 10px;
+        }
+        
+        .chat-box {
+            height: 300px;
+            max-height: 50vh;
+            padding: 15px;
+        }
+        
+        .message {
+            max-width: 90%;
+            font-size: 0.9rem;
+        }
+        
+        .example-btn {
+            font-size: 0.75rem;
+            margin: 3px;
+            padding: 5px 10px;
+        }
+        
+        .input-group input {
+            padding: 12px 15px;
+            font-size: 0.9rem;
+        }
+        
+        .input-group button {
+            padding: 12px 20px;
+        }
     }
 </style>
 {% endblock %}
@@ -179,10 +211,10 @@
     </div>
     
     <!-- Información adicional -->
-    <div class="alert alert-info mt-3">
-        <i class="fas fa-info-circle me-2"></i>
-        <strong>Consejo:</strong> Puedes hacer preguntas sobre pacientes, comunidades, diagnósticos, 
-        costes, estancias, UCI, sexo y fechas de ingreso. El sistema generará consultas SQL automáticamente.
+    <div class="alert alert-warning mt-3">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Advertencia:</strong> Las respuestas son generadas por inteligencia artificial generativa 
+        y pueden no ser completamente exactas. Verifica la información cuando sea crítica.
     </div>
 </div>
 
@@ -198,31 +230,37 @@
         }
     }
     
-    function addMessage(text, isUser, sqlQuery = null) {
+    function processMarkdown(text) {
+        // Convertir negritas: **texto** a <strong>texto</strong>
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        
+        // Convertir cursivas: *texto* a <em>texto</em>
+        text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        
+        // Convertir saltos de línea a <br>
+        text = text.replace(/\n/g, '<br>');
+        
+        return text;
+    }
+    
+    function addMessage(text, isUser) {
         const chatBox = document.getElementById('chatBox');
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
         
         const now = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         
+        // Procesar markdown solo para mensajes de IA
+        const processedText = isUser ? text : processMarkdown(text);
+        
         let content = `
             <div class="message-header">
                 <i class="fas fa-${isUser ? 'user' : 'robot'} me-1"></i>
                 ${isUser ? 'Tú' : 'Asistente IA'}
             </div>
-            <div>${text}</div>
+            <div>${processedText}</div>
+            <div class="timestamp">${now}</div>
         `;
-        
-        if (sqlQuery) {
-            content += `
-                <div class="sql-query mt-2">
-                    <small><i class="fas fa-database me-1"></i><strong>Consulta SQL:</strong></small><br>
-                    ${sqlQuery}
-                </div>
-            `;
-        }
-        
-        content += `<div class="timestamp">${now}</div>`;
         
         messageDiv.innerHTML = content;
         chatBox.appendChild(messageDiv);
@@ -263,7 +301,7 @@
             if (data.error) {
                 addMessage(`❌ Error: ${data.error}`, false);
             } else {
-                addMessage(data.answer, false, data.sql_query);
+                addMessage(data.answer, false);
             }
         } catch (error) {
             addMessage('❌ Error al procesar tu pregunta. Por favor, intenta de nuevo.', false);
