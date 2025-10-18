@@ -155,15 +155,24 @@
             </div>
             <div class="col-md-2">
                 <label for="sexo" class="form-label">
-                    <i class="fas fa-venus-mars me-1"></i>Sexo
+                    <i class="fas fa-venus-mars me-1"></i>Género
                 </label>
                 <select class="form-select" id="sexo" name="sexo">
-                    <option value="">Todos</option>
+                    <option value="">Todos los géneros</option>
                     {% for s in sexos %}
-                    <option value="{{ s }}">{{ s }}</option>
+                    <option value="{{ s }}">
+                        {% if s == 'M' or s == 'Masculino' or s == 'Hombre' %}
+                            👨 {{ s }}
+                        {% elif s == 'F' or s == 'Femenino' or s == 'Mujer' %}
+                            👩 {{ s }}
+                        {% else %}
+                            ⚧️ {{ s }}
+                        {% endif %}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
+
             <div class="col-md-3">
                 <label for="categoria" class="form-label">
                     <i class="fas fa-tag me-1"></i>Categoría
