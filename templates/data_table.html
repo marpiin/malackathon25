@@ -1,329 +1,409 @@
 {% extends "base.html" %}
 
 {% block head %}
-<title>Tabla de Datos - Salud Mental</title>
+<style>
+    .table-container {
+        background: var(--white);
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table thead th {
+        background: var(--primary-color);
+        color: var(--white);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        padding: 1rem;
+        border: none;
+        white-space: nowrap;
+    }
+
+    .table tbody td {
+        padding: 1rem;
+        vertical-align: middle;
+        color: var(--text-dark);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .table tbody tr:hover {
+        background-color: rgba(26, 188, 156, 0.05);
+        transform: scale(1.005);
+        transition: all 0.2s ease;
+    }
+
+    .table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .pagination {
+        margin-top: 1.5rem;
+        margin-bottom: 0;
+    }
+
+    .pagination .page-link {
+        border-radius: 8px;
+        margin: 0 4px;
+        color: var(--accent-color);
+        border: 2px solid var(--border-color);
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        transition: all 0.2s ease;
+    }
+
+    .pagination .page-item.active .page-link {
+        background: var(--accent-color);
+        border-color: var(--accent-color);
+        color: var(--white);
+        box-shadow: 0 4px 12px rgba(26, 188, 156, 0.3);
+    }
+
+    .pagination .page-link:hover:not(.active) {
+        background-color: var(--accent-color);
+        color: var(--white);
+        border-color: var(--accent-color);
+        transform: translateY(-2px);
+    }
+
+    .table-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: rgba(26, 188, 156, 0.05);
+        border-radius: 10px;
+    }
+
+    .records-info {
+        font-size: 0.9rem;
+        color: var(--text-medium);
+        font-weight: 500;
+    }
+
+    .per-page-selector {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .per-page-selector label {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--text-medium);
+        font-weight: 500;
+    }
+
+    .per-page-selector select {
+        width: auto;
+        padding: 0.4rem 0.75rem;
+    }
+
+    @media (max-width: 768px) {
+        .table-info {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .table-responsive {
+            font-size: 0.85rem;
+        }
+
+        .table thead th,
+        .table tbody td {
+            padding: 0.75rem 0.5rem;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros de Datos</h5>
-    </div>
-    <div class="card-body">
-        <form id="filterForm">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label for="comunidad" class="form-label">Comunidad Autónoma</label>
-                    <select class="form-select" id="comunidad" name="comunidad">
-                        <option value="">Todas las comunidades</option>
-                        {% for comunidad in comunidades %}
-                        <option value="{{ comunidad }}">{{ comunidad }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="sexo" class="form-label">Sexo</label>
-                    <select class="form-select" id="sexo" name="sexo">
-                        <option value="">Todos</option>
-                        {% for sexo in sexos %}
-                        <option value="{{ sexo }}">{{ sexo }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="categoria" class="form-label">Categoría Diagnóstico</label>
-                    <select class="form-select" id="categoria" name="categoria">
-                        <option value="">Todas las categorías</option>
-                        {% for categoria in categorias %}
-                        <option value="{{ categoria }}">{{ categoria }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="fecha_inicio" class="form-label">Fecha Inicio</label>
-                    <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio">
-                </div>
-                <div class="col-md-3">
-                    <label for="fecha_fin" class="form-label">Fecha Fin</label>
-                    <input type="date" class="form-control" id="fecha_fin" name="fecha_fin">
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-search me-2"></i>Aplicar Filtros
-                    </button>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="button" id="resetFilters" class="btn btn-outline-secondary w-100">
-                        <i class="fas fa-redo me-2"></i>Restablecer
-                    </button>
-                </div>
-            </div>
-        </form>
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-6 mb-2">
+            <i class="fas fa-table text-primary me-2"></i>
+            Tabla de Datos
+        </h1>
+        <p class="text-muted">Exploración detallada de registros de salud mental</p>
     </div>
 </div>
 
-<div class="card shadow-sm">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="fas fa-table me-2"></i>Tabla de Datos de Salud Mental</h5>
-        <div>
-            <button id="exportCSV" class="btn btn-light btn-sm">
-                <i class="fas fa-file-csv me-1"></i>Exportar CSV
-            </button>
+<!-- Filtros -->
+<div class="filter-section">
+    <div class="filter-title">
+        <i class="fas fa-filter"></i>
+        Filtros de Búsqueda
+    </div>
+    <form id="filterForm">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label for="comunidad" class="form-label">
+                    <i class="fas fa-map-marker-alt me-1"></i>Comunidad
+                </label>
+                <select class="form-select" id="comunidad" name="comunidad">
+                    <option value="">Todas</option>
+                    {% for comunidad in comunidades %}
+                    <option value="{{ comunidad }}">{{ comunidad }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="sexo" class="form-label">
+                    <i class="fas fa-venus-mars me-1"></i>Sexo
+                </label>
+                <select class="form-select" id="sexo" name="sexo">
+                    <option value="">Todos</option>
+                    {% for s in sexos %}
+                    <option value="{{ s }}">{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="categoria" class="form-label">
+                    <i class="fas fa-tag me-1"></i>Categoría
+                </label>
+                <select class="form-select" id="categoria" name="categoria">
+                    <option value="">Todas</option>
+                    {% for categoria in categorias %}
+                    <option value="{{ categoria }}">{{ categoria }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="fecha_inicio" class="form-label">
+                    <i class="fas fa-calendar me-1"></i>Desde
+                </label>
+                <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio">
+            </div>
+            <div class="col-md-2">
+                <label for="fecha_fin" class="form-label">
+                    <i class="fas fa-calendar me-1"></i>Hasta
+                </label>
+                <input type="date" class="form-control" id="fecha_fin" name="fecha_fin">
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search me-2"></i>Buscar
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="btnLimpiar">
+                    <i class="fas fa-undo me-2"></i>Limpiar
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla -->
+<div class="table-container mt-4">
+    <div class="table-info">
+        <div class="records-info">
+            <i class="fas fa-info-circle me-1"></i>
+            Mostrando <strong id="recordsStart">0</strong> - <strong id="recordsEnd">0</strong> de <strong id="recordsTotal">0</strong> registros
+        </div>
+        <div class="per-page-selector">
+            <label for="perPage">
+                <i class="fas fa-list me-1"></i>Registros por página:
+            </label>
+            <select class="form-select form-select-sm" id="perPage">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
         </div>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped table-hover table-bordered">
-                <thead class="table-light">
-                    <tr>
-                        <th>Comunidad Atención</th>
-                        <th>Sexo</th>
-                        <th>Edad</th>
-                        <th>Fecha de Ingreso</th>
-                        <th>Mes</th>
-                        <th>Diagnóstico Principal</th>
-                        <th>Categoría</th>
-                        <th>Servicio</th>
-                        <th>Estancia Días</th>
-                        <th>Coste APR</th>
-                        <th>Ingreso UCI</th>
-                    </tr>
-                </thead>
-                <tbody id="dataTableBody">
-                    <tr>
-                        <td colspan="11" class="text-center py-3">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Cargando...</span>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        
-        <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center" id="pagination">
-                <li class="page-item disabled">
-                    <a class="page-link" href="#" tabindex="-1">Anterior</a>
-                </li>
-                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                <li class="page-item">
-                    <a class="page-link" href="#">Siguiente</a>
-                </li>
-            </ul>
-        </nav>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr id="tableHeaders"></tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr>
+                    <td colspan="100" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Cargando datos...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     </div>
+
+    <nav>
+        <ul class="pagination justify-content-center" id="pagination"></ul>
+    </nav>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// Función global para cargar datos de la tabla
-function loadTableData(page) {
-    const currentPage = page || 1;
-    const perPage = 10;
-    const form = document.getElementById('filterForm');
-    const formData = new FormData(form);
-    const params = new URLSearchParams(formData);
-    
-    params.append('page', currentPage);
-    params.append('per_page', perPage);
-    
-    // Mostrar indicador de carga
-    document.getElementById('dataTableBody').innerHTML = `
-        <tr>
-            <td colspan="11" class="text-center py-3">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando...</span>
-                </div>
-            </td>
-        </tr>
-    `;
-    
-    fetch(`/api/table?${params.toString()}`)
-        .then(response => response.json())
-        .then(data => {
-            // Actualizar tabla
-            const tableBody = document.getElementById('dataTableBody');
-            tableBody.innerHTML = '';
-            
-            if (data.items.length === 0) {
-                tableBody.innerHTML = `
+    let currentPage = 1;
+    let perPage = 10;
+
+    function loadTable() {
+        const formData = new FormData(document.getElementById('filterForm'));
+        formData.append('page', currentPage);
+        formData.append('per_page', perPage);
+        const params = new URLSearchParams(formData);
+
+        fetch(`/api/table?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('tableBody').innerHTML = `
+                        <tr>
+                            <td colspan="100" class="text-center py-5">
+                                <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+                                <p class="text-muted">${data.error}</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                updateTable(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('tableBody').innerHTML = `
                     <tr>
-                        <td colspan="11" class="text-center py-3">
-                            No se encontraron datos con los filtros seleccionados
+                        <td colspan="100" class="text-center py-5">
+                            <i class="fas fa-times-circle text-danger fa-3x mb-3"></i>
+                            <p class="text-muted">Error al cargar los datos</p>
                         </td>
                     </tr>
                 `;
-                return;
-            }
-            
-            data.items.forEach(item => {
-                const row = document.createElement('tr');
-                
-                // Mapear sexo a etiquetas legibles
-                let sexoLabel = item['SEXO'] || item['sexo'];
-                if (sexoLabel === '1') sexoLabel = 'Hombre';
-                else if (sexoLabel === '2') sexoLabel = 'Mujer';
-                else if (sexoLabel === '9') sexoLabel = 'No especificado';
-                
-                row.innerHTML = `
-                    <td>${item['COMUNIDAD_ATENCION'] || '-'}</td>
-                    <td>${sexoLabel || '-'}</td>
-                    <td>${item['EDAD_EN_INGRESO'] || '-'}</td>
-                    <td>${item['FECHA_INGRESO'] || '-'}</td>
-                    <td>${item['MES_INGRESO'] || '-'}</td>
-                    <td>${item['DIAGNOSTICO_PRINCIPAL'] ? (item['DIAGNOSTICO_PRINCIPAL'].length > 50 ? item['DIAGNOSTICO_PRINCIPAL'].substring(0, 47) + '...' : item['DIAGNOSTICO_PRINCIPAL']) : '-'}</td>
-                    <td>${item['CATEGORIA_DIAGNOSTICO'] ? (item['CATEGORIA_DIAGNOSTICO'].length > 40 ? item['CATEGORIA_DIAGNOSTICO'].substring(0, 37) + '...' : item['CATEGORIA_DIAGNOSTICO']) : '-'}</td>
-                    <td>${item['NOMBRE_SERVICIO'] || '-'}</td>
-                    <td>${item['ESTANCIA_DIAS'] || '-'}</td>
-                    <td>${item['COSTE_APR'] ? '€' + parseFloat(item['COSTE_APR']).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
-                    <td>${item['INGRESO_EN_UCI'] || '-'}</td>
-                `;
-                tableBody.appendChild(row);
             });
-            
-            // Actualizar paginación
-            updatePagination(data.total, data.pages, data.current_page);
-        })
-        .catch(error => {
-            console.error('Error al cargar datos:', error);
-            document.getElementById('dataTableBody').innerHTML = `
+    }
+
+    function updateTable(data) {
+        // Actualizar información de registros
+        const start = (currentPage - 1) * perPage + 1;
+        const end = Math.min(start + data.items.length - 1, data.total);
+        document.getElementById('recordsStart').textContent = data.items.length > 0 ? start : 0;
+        document.getElementById('recordsEnd').textContent = end;
+        document.getElementById('recordsTotal').textContent = data.total;
+
+        // Actualizar headers
+        if (data.items.length > 0) {
+            const headers = Object.keys(data.items[0]);
+            document.getElementById('tableHeaders').innerHTML = headers
+                .map(h => `<th>${h}</th>`)
+                .join('');
+
+            // Actualizar body
+            document.getElementById('tableBody').innerHTML = data.items
+                .map(item => `
+                    <tr>
+                        ${headers.map(h => `<td>${item[h] !== null ? item[h] : '-'}</td>`).join('')}
+                    </tr>
+                `)
+                .join('');
+        } else {
+            document.getElementById('tableBody').innerHTML = `
                 <tr>
-                    <td colspan="11" class="text-center py-3 text-danger">
-                        Error al cargar los datos. Por favor, inténtalo de nuevo.
+                    <td colspan="100" class="text-center py-5">
+                        <i class="fas fa-inbox text-muted fa-3x mb-3"></i>
+                        <p class="text-muted">No se encontraron registros</p>
                     </td>
                 </tr>
             `;
-        });
-}
-
-// Función para actualizar la paginación
-function updatePagination(total, pages, current) {
-    const pagination = document.getElementById('pagination');
-    pagination.innerHTML = '';
-    
-    // Botón Anterior
-    const prevLi = document.createElement('li');
-    prevLi.className = `page-item ${current === 1 ? 'disabled' : ''}`;
-    prevLi.innerHTML = `<a class="page-link" href="#" onclick="loadTableData(${current - 1}); return false;">Anterior</a>`;
-    pagination.appendChild(prevLi);
-    
-    // Números de página
-    const maxVisible = 5;
-    let startPage = Math.max(1, current - Math.floor(maxVisible / 2));
-    let endPage = Math.min(pages, startPage + maxVisible - 1);
-    
-    if (endPage - startPage + 1 < maxVisible) {
-        startPage = Math.max(1, endPage - maxVisible + 1);
-    }
-    
-    if (startPage > 1) {
-        const firstLi = document.createElement('li');
-        firstLi.className = 'page-item';
-        firstLi.innerHTML = `<a class="page-link" href="#" onclick="loadTableData(1); return false;">1</a>`;
-        pagination.appendChild(firstLi);
-        
-        if (startPage > 2) {
-            const ellipsisLi = document.createElement('li');
-            ellipsisLi.className = 'page-item disabled';
-            ellipsisLi.innerHTML = `<a class="page-link" href="#">...</a>`;
-            pagination.appendChild(ellipsisLi);
         }
-    }
-    
-    for (let i = startPage; i <= endPage; i++) {
-        const pageLi = document.createElement('li');
-        pageLi.className = `page-item ${i === current ? 'active' : ''}`;
-        pageLi.innerHTML = `<a class="page-link" href="#" onclick="loadTableData(${i}); return false;">${i}</a>`;
-        pagination.appendChild(pageLi);
-    }
-    
-    if (endPage < pages) {
-        if (endPage < pages - 1) {
-            const ellipsisLi = document.createElement('li');
-            ellipsisLi.className = 'page-item disabled';
-            ellipsisLi.innerHTML = `<a class="page-link" href="#">...</a>`;
-            pagination.appendChild(ellipsisLi);
-        }
-        
-        const lastLi = document.createElement('li');
-        lastLi.className = 'page-item';
-        lastLi.innerHTML = `<a class="page-link" href="#" onclick="loadTableData(${pages}); return false;">${pages}</a>`;
-        pagination.appendChild(lastLi);
-    }
-    
-    // Botón Siguiente
-    const nextLi = document.createElement('li');
-    nextLi.className = `page-item ${current === pages ? 'disabled' : ''}`;
-    nextLi.innerHTML = `<a class="page-link" href="#" onclick="loadTableData(${current + 1}); return false;">Siguiente</a>`;
-    pagination.appendChild(nextLi);
-}
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Cargar datos iniciales
-    loadTableData(1);
-    
-    // Manejar envío del formulario
+        // Actualizar paginación
+        updatePagination(data.pages, data.current_page);
+    }
+
+    function updatePagination(totalPages, currentPageNum) {
+        const pagination = document.getElementById('pagination');
+        let html = '';
+
+        // Botón anterior
+        html += `
+            <li class="page-item ${currentPageNum === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${currentPageNum - 1}); return false;">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+        `;
+
+        // Páginas
+        const maxVisible = 5;
+        let startPage = Math.max(1, currentPageNum - Math.floor(maxVisible / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+
+        if (endPage - startPage < maxVisible - 1) {
+            startPage = Math.max(1, endPage - maxVisible + 1);
+        }
+
+        if (startPage > 1) {
+            html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(1); return false;">1</a></li>`;
+            if (startPage > 2) {
+                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            html += `
+                <li class="page-item ${i === currentPageNum ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+                </li>
+            `;
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+            html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${totalPages}); return false;">${totalPages}</a></li>`;
+        }
+
+        // Botón siguiente
+        html += `
+            <li class="page-item ${currentPageNum === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${currentPageNum + 1}); return false;">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+        `;
+
+        pagination.innerHTML = html;
+    }
+
+    function changePage(page) {
+        currentPage = page;
+        loadTable();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     document.getElementById('filterForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        loadTableData(1);
+        currentPage = 1;
+        loadTable();
     });
-    
-    // Manejar botón de restablecer
-    document.getElementById('resetFilters').addEventListener('click', function() {
+
+    document.getElementById('btnLimpiar').addEventListener('click', function() {
         document.getElementById('filterForm').reset();
-        loadTableData(1);
+        currentPage = 1;
+        loadTable();
     });
-    
-    // Manejar exportación a CSV
-    document.getElementById('exportCSV').addEventListener('click', function() {
-        const form = document.getElementById('filterForm');
-        const formData = new FormData(form);
-        const params = new URLSearchParams(formData);
-        
-        params.append('page', 1);
-        params.append('per_page', 100000);
-        
-        fetch(`/api/table?${params.toString()}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.items.length === 0) {
-                    alert('No hay datos para exportar');
-                    return;
-                }
-                
-                // Crear CSV con BOM para UTF-8
-                let csv = '\uFEFF';
-                csv += 'Comunidad Atención,Sexo,Edad,Fecha Ingreso,Mes,Diagnóstico Principal,Categoría,Servicio,Estancia Días,Coste APR,Ingreso UCI\n';
-                
-                data.items.forEach(item => {
-                    let sexoLabel = item['SEXO'] || item['sexo'];
-                    if (sexoLabel === '1') sexoLabel = 'Hombre';
-                    else if (sexoLabel === '2') sexoLabel = 'Mujer';
-                    else if (sexoLabel === '9') sexoLabel = 'No especificado';
-                    
-                    csv += `"${item['COMUNIDAD_ATENCION'] || ''}","${sexoLabel || ''}","${item['EDAD_EN_INGRESO'] || ''}","${item['FECHA_INGRESO'] || ''}","${item['MES_INGRESO'] || ''}","${(item['DIAGNOSTICO_PRINCIPAL'] || '').replace(/"/g, '""')}","${(item['CATEGORIA_DIAGNOSTICO'] || '').replace(/"/g, '""')}","${item['NOMBRE_SERVICIO'] || ''}","${item['ESTANCIA_DIAS'] || ''}","${item['COSTE_APR'] || ''}","${item['INGRESO_EN_UCI'] || ''}"\n`;
-                });
-                
-                // Descargar archivo
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.setAttribute('href', url);
-                link.setAttribute('download', 'salud_mental_datos.csv');
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            })
-            .catch(error => {
-                console.error('Error al exportar datos:', error);
-                alert('Error al exportar los datos. Por favor, inténtalo de nuevo.');
-            });
+
+    document.getElementById('perPage').addEventListener('change', function() {
+        perPage = parseInt(this.value);
+        currentPage = 1;
+        loadTable();
     });
-});
+
+    // Cargar datos iniciales
+    loadTable();
 </script>
 {% endblock %}
